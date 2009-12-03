@@ -186,7 +186,10 @@ test4_test() ->
 
 test4a_test() ->
     Mock = mock:new(),
-    {'EXIT',_} = (catch mock:strict(Mock, testmodule1, mockme1, [1,2], {hier_steht_was_falsches, xxx})).
+    {'EXIT',_} =
+        (catch mock:strict(
+                 Mock, testmodule1, mockme1, [1,2],
+                 {hier_steht_was_falsches, xxx})).
 
 test5_test() ->
     Mock = mock:new(),
@@ -204,9 +207,11 @@ test5_test() ->
 
 test6_test() ->
     Mock = mock:new(),
-    mock:o_o(Mock, testmodule1, mockme1, [1,2], {function, fun(X,Y) ->
-                                                                   X + Y
-                                                           end}),
+    mock:o_o(
+      Mock, testmodule1, mockme1, [1,2],
+      {function, fun(X,Y) ->
+                         X + Y
+                 end}),
     mock:replay(Mock),
     R = testmodule1:mockme1(1,2),
     mock:verify(Mock),
@@ -214,23 +219,25 @@ test6_test() ->
 
 test6a_test() ->
     Mock = mock:new(),
-    mock:stub(Mock, testmodule1, mockme1, [1,2], {function, fun(_,_) ->
-                                                                    erlang:error(test)
-                                                            end}),
+    mock:stub(
+      Mock, testmodule1, mockme1, [1,2],
+      {function, fun(_,_) ->
+                         erlang:error(test)
+                 end}),
     mock:replay(Mock),
     {'EXIT',_} = (catch testmodule1:mockme1(1,2)),
     mock:verify(Mock).
 
 test7_test() ->
     Mock = mock:new(),
-    mock:expect(Mock, in_order, testmodule1, mockme1, 1,
-                fun([{qXYZ, D, B, A}]) when A >= B andalso B >= D ->
-                        true
-                end,
-                {function, fun({qXYZ, D, B, A}) ->
-                                   [B,D|A]
-                           end}
-               ),
+    mock:expect(
+      Mock, in_order, testmodule1, mockme1, 1,
+      fun([{qXYZ, D, B, A}]) when A >= B andalso B >= D ->
+              true
+      end,
+      {function, fun({qXYZ, D, B, A}) ->
+                         [B,D|A]
+                 end}),
     mock:replay(Mock),
     L = testmodule1:mockme1({qXYZ, 1,2,3}),
     mock:verify(Mock),
@@ -238,14 +245,15 @@ test7_test() ->
 
 test7a_test() ->
     Mock = mock:new(),
-    mock:expect(Mock, in_order, testmodule1, mockme1, 1,
-                % hier fehlen die obligatorischen Klammern
-                fun({qXYZ, D, B, A}) when A >= B andalso B >= D ->
-                        true
-                end,
-                {function, fun({qXYZ, D, B, A}) ->
-                                   [B,D|A]
-                           end}
-               ),
+    mock:expect(
+      Mock, in_order, testmodule1, mockme1, 1,
+      % hier fehlen die obligatorischen Klammern
+      fun({qXYZ, D, B, A}) when A >= B andalso B >= D ->
+              true
+      end,
+      {function,
+       fun({qXYZ, D, B, A}) ->
+               [B,D|A]
+       end}),
     mock:replay(Mock),
-    {'EXIT',_}= (catch testmodule1:mockme1({qXYZ, 1,2,3})).
+    {'EXIT',_} = (catch testmodule1:mockme1({qXYZ, 1,2,3})).
