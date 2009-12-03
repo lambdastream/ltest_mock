@@ -261,63 +261,69 @@ record_invocations([], [], Stub, EmptyFun) when is_function(EmptyFun) ->
     EmptyFun(),
     record_invocations([], [], Stub, undefined);
 record_invocations(InOrder, OutOfOrder, Stub, EF) ->
-    %% wait for all incoming invocations, expect every invocation and crash if the invocation was not correct
+    % wait for all incoming invocations, expect every invocation and crash if
+    % the invocation was not correct
     receive
- Invocation = {ProcUnderTestPid, Mod, Fun, Arity, Args} ->
-     InvMatcher = fun ([{M,F,A}|{Pred,_}]) ->
-     {M,F,A} == {Mod, Fun, Arity} andalso Pred(Args)
-    end,
-     try
-  case InOrder of
-      [Test| _] ->  InvMatcher(Test);
-      [] -> false
-  end
-  of
-  true ->
-      [[_|{_,Function}]| IOR] = InOrder,
-      ProcUnderTestPid ! {mock_process_gaurd__, Function},
-      record_invocations(IOR, OutOfOrder, Stub, EF);
+	Invocation = {ProcUnderTestPid, Mod, Fun, Arity, Args} ->
+	    InvMatcher = fun ([{M,F,A}|{Pred,_}]) ->
+				 {M,F,A} == {Mod, Fun, Arity} andalso Pred(Args)
+			 end,
+	    try
+		case InOrder of
+		    [Test| _] ->  InvMatcher(Test);
+		    [] -> false
+		end
+		of
+		true ->
+		    [[_|{_,Function}]| IOR] = InOrder,
+		    ProcUnderTestPid ! {mock_process_gaurd__, Function},
+		    record_invocations(IOR, OutOfOrder, Stub, EF);
 
-  false ->
-      case lists:splitwith(InvMatcher, OutOfOrder) of
-   {[OOODef|Rest1],Rest2} ->
-       [_|{_,Function}] = OOODef,
-       ProcUnderTestPid ! {mock_process_gaurd__, Function},
-       record_invocations(InOrder, Rest1 ++ Rest2, Stub, EF);
+		false ->
+		    case lists:splitwith(InvMatcher, OutOfOrder) of
+			{[OOODef|Rest1],Rest2} ->
+			    [_|{_,Function}] = OOODef,
+			    ProcUnderTestPid ! {mock_process_gaurd__, Function},
+			    record_invocations(
+			      InOrder, Rest1 ++ Rest2, Stub, EF);
 
-   {[], _} ->
-       case lists:filter(InvMatcher, Stub) of
-    [StubDef|_] ->
-        [_|{_,Function}] = StubDef,
-        ProcUnderTestPid ! {mock_process_gaurd__, Function},
-        record_invocations(InOrder, OutOfOrder, Stub, EF);
+			{[], _} ->
+			    case lists:filter(InvMatcher, Stub) of
+				[StubDef|_] ->
+				    [_|{_,Function}] = StubDef,
+				    ProcUnderTestPid ! {mock_process_gaurd__,
+							Function},
+				    record_invocations(
+				      InOrder, OutOfOrder, Stub, EF);
 
-    _ ->
-        EF(),
-        Reason = {unexpected_invocation, Invocation},
-        ProcUnderTestPid ! {mock_process_gaurd__, {error, Reason}},
-        fail(Reason)
-       end
-      end
-     catch
-  ET:EX ->
-      Reason = {matching_function_is_incorrent, Invocation, {ET, EX}},
-      ProcUnderTestPid ! {mock_process_gaurd__, {error, Reason}},
-      EF(),
-      fail(Reason)
-     end;
+				_ ->
+				    EF(),
+				    Reason = {unexpected_invocation, Invocation},
+				    ProcUnderTestPid ! {mock_process_gaurd__,
+							{error, Reason}},
+				    fail(Reason)
+			    end
+		    end
+	    catch
+		ET:EX ->
+		    Reason = {matching_function_is_incorrent,
+			      Invocation, {ET, EX}},
+		    ProcUnderTestPid ! {mock_process_gaurd__, {error, Reason}},
+		    EF(),
+		    fail(Reason)
+	    end;
 
- {From, verify} ->
-     case {InOrder,OutOfOrder} of
-  {[],[]} ->
-      success(From);
-  MissingRest ->
-      fail(From,{expected_invocations_missing, MissingRest})
-     end;
+	{From, verify} ->
+	    case {InOrder,OutOfOrder} of
+		{[],[]} ->
+		    success(From);
+		MissingRest ->
+		    fail(From,{expected_invocations_missing, MissingRest})
+	    end;
 
- {From, What} ->
-     EF(),
-     fail(From, {invalid_state, What})
+	{From, What} ->
+	    EF(),
+	    fail(From, {invalid_state, What})
 
     end.
 
