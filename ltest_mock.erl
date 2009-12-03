@@ -84,40 +84,45 @@ verify_after_last_call(Mock, TimeOut) ->
     error_logger:info_msg("mock ~p: verify finished~n~n~n", [Mock]).
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% utility functions for dealing with mock code called from a new process.
+%%%-------------------------------------------------------------------
+%%% utility functions for dealing with mock code called from a new process.
+%%%-------------------------------------------------------------------
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%--------------------------------------------------------------------
 %% this will create an answering function that captures the current pid and
 %% sends an atom to that pid, make sure to use await(atom()) to block until that
 %% message is sent
+%%--------------------------------------------------------------------
 signal_fun(Atom, RetVal) ->
     SelfP = self(),
-    {function1, fun(_) ->
-   signal(SelfP, Atom),
-   RetVal
-  end}.
+    {function1,
+     fun(_) ->
+	     signal(SelfP, Atom),
+	     RetVal
+     end}.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%--------------------------------------------------------------------
 %% internal signal function that send a message in "signal" protocol format to
 %% some "await(...)"
+%%--------------------------------------------------------------------
 signal(Pid, Atom) ->
     error_logger:info_msg("signalling ~p from  ~p to ~p~n", [Atom, self(), Pid]),
     Pid ! {mock_signal, Atom}.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%--------------------------------------------------------------------
 %% this block the current process until signal(SameAtom) from another process is
 %% invoked
+%%--------------------------------------------------------------------
 await(Atom) when is_atom(Atom) ->
     await(Atom, 2000).
 
 await(Atom,To) when is_atom(Atom)->
     error_logger:info_msg("now awaiting ~p in process ~p~n", [Atom, self()]),
     receive
- {mock_signal, Atom} ->
-     error_logger:info_msg("await succeeded: ~p~n", [Atom])
+	{mock_signal, Atom} ->
+	    error_logger:info_msg("await succeeded: ~p~n", [Atom])
     after To ->
-     fail({timeout, await, Atom})
+	    fail({timeout, await, Atom})
     end.
 
 
