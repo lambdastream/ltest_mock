@@ -11,27 +11,27 @@
 -include_lib("eunit/include/eunit.hrl").
 
 suite() ->
-  test0(),
-  test0a(),
-  test0b(),
-  test0c(),
-  test0d(),
-  test0e(),
-  test1(),
-  test2(),
-  test3(),
-  test3a(),
-  test3b(),
-  test4(),
-  test4a(),
-  test5(),
-  test6(),
-  test6a(),
-  test7(),
-  test7a(),
+  test0_test(),
+  test0a_test(),
+  test0b_test(),
+  test0c_test(),
+  test0d_test(),
+  test0e_test(),
+  test1_test(),
+  test2_test(),
+  test3_test(),
+  test3a_test(),
+  test3b_test(),
+  test4_test(),
+  test4a_test(),
+  test5_test(),
+  test6_test(),
+  test6a_test(),
+  test7_test(),
+  test7a_test(),
   io:format("~n~nfinished without unexpected errors! error reports may be ignored!!~n~n~n").
 
-test0() ->
+test0_test() ->
   Mock = mock:new(),
   mock:expect(Mock, in_order, testmodule1, mockme1, [1,2], {return, ok}),
   mock:expect(Mock, in_order, testmodule1, mockme2, [2,3], {return, ok}),
@@ -47,7 +47,7 @@ test0() ->
 
   mock:verify(Mock).
 
-test0a() ->
+test0a_test() ->
   Mock = mock:new(),
   mock:expect(Mock, in_order, testmodule1, mockme1, [1,2], {return, ok}),
   mock:expect(Mock, in_order, testmodule1, mockme2, [2,3], {return, ok}),
@@ -60,7 +60,7 @@ test0a() ->
   testmodule1:mockme2(2,3),
   {'EXIT',_} = (catch testmodule2:mockme1(1,2)).
 
-test0b() ->
+test0b_test() ->
   Mock = mock:new(),
   mock:expect(Mock, in_order, testmodule1, mockme1, [1,2], {return, ok}),
   mock:expect(Mock, in_order, testmodule1, mockme2, [2,3], {return, ok}),
@@ -75,7 +75,7 @@ test0b() ->
 
   {error, _} = mock:verify(Mock).
 
-test0c() ->
+test0c_test() ->
   Mock = mock:new(),
   mock:strict(Mock, testmodule1, mockme1, [1,2], {return, ok}),
   mock:o_o   (Mock, testmodule1, mockme2, [2,3], {return, ok}),
@@ -91,7 +91,7 @@ test0c() ->
 
   mock:verify(Mock).
 
-test0d() ->
+test0d_test() ->
   Mock = mock:new(),
   mock:strict(Mock, testmodule1, mockme1, [1,2], {return, ok}),
   mock:o_o   (Mock, testmodule1, mockme2, [2,3], {return, ok}),
@@ -106,7 +106,7 @@ test0d() ->
 
   {error, _} = mock:verify(Mock).
 
-test0e() ->
+test0e_test() ->
   Mock = mock:new(),
   mock:strict(Mock, testmodule1, mockme1, [1,2], {return, ok}),
   mock:o_o   (Mock, testmodule1, mockme2, [2,3], {return, ok}),
@@ -131,20 +131,20 @@ test0e() ->
 
   mock:verify(Mock).
 
-test1() ->
+test1_test() ->
   Mock = mock:new(),
   mock:replay(Mock),
   mock:verify(Mock).
 
 %error expected
-test2() ->
+test2_test() ->
   Mock = mock:new(),
   mock:strict(Mock, testmodule, mockme, [1,2],{return, ok}),
   mock:replay(Mock),
   {error, _} = mock:verify(Mock).
 
 
-test3() ->
+test3_test() ->
   Mock = mock:new(),
   mock:strict(Mock, testmodule2, mockme1, [666], {error, end_of_times}),
   mock:replay(Mock),
@@ -156,7 +156,7 @@ test3() ->
      ok
   end.  
 
-test3a() ->
+test3a_test() ->
   Mock = mock:new(),
   mock:o_o(Mock, testmodule2, mockme1, [666], {throw, end_of_times}),
   mock:replay(Mock),
@@ -168,7 +168,7 @@ test3a() ->
      ok
   end.  
 
-test3b() ->
+test3b_test() ->
   Mock = mock:new(),
   mock:strict(Mock, testmodule2, mockme1, [666], {exit, end_of_times}),
   mock:replay(Mock),
@@ -180,15 +180,15 @@ test3b() ->
      ok
   end.  
 
-test4() ->
+test4_test() ->
   Mock = mock:new(),
   {error,_} = mock:verify(Mock).
 
-test4a() ->
+test4a_test() ->
   Mock = mock:new(),
   {'EXIT',_} = (catch mock:strict(Mock, testmodule1, mockme1, [1,2], {hier_steht_was_falsches, xxx})).
 
-test5() ->
+test5_test() ->
   Mock = mock:new(),
   mock:strict(Mock, testmodule1, mockme1, [1,2], {rec_msg, self()}),
   mock:replay(Mock),
@@ -202,7 +202,7 @@ test5() ->
      error
   end.
 
-test6() ->
+test6_test() ->
   Mock = mock:new(),
   mock:o_o(Mock, testmodule1, mockme1, [1,2], {function, fun(X,Y) ->
             X + Y
@@ -212,7 +212,7 @@ test6() ->
   mock:verify(Mock),
   3 = R.
 
-test6a() ->
+test6a_test() ->
   Mock = mock:new(),
   mock:stub(Mock, testmodule1, mockme1, [1,2], {function, fun(_,_) ->
             erlang:error(test)
@@ -221,7 +221,7 @@ test6a() ->
   {'EXIT',_} = (catch testmodule1:mockme1(1,2)),
   mock:verify(Mock).
 
-test7() ->
+test7_test() ->
   Mock = mock:new(),
   mock:expect(Mock, in_order, testmodule1, mockme1, 1,
   fun([{qXYZ, D, B, A}]) when A >= B andalso B >= D ->
@@ -236,7 +236,7 @@ test7() ->
   mock:verify(Mock),
   [2,1|3] = L.
 
-test7a() ->
+test7a_test() ->
   Mock = mock:new(),
   mock:expect(Mock, in_order, testmodule1, mockme1, 1,
   %% hier fehlen die obligatorischen Klammern
