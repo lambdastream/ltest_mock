@@ -199,57 +199,62 @@ extract_module_set(Combined) ->
 
 program_mock(InOrder, OutOfOrder, Stub) ->
     receive
- {From, {expect, Type, Mod, Fun, Arity, Arg}} ->
-     FunDef = [{Mod, Fun, Arity} | {filter_fun(Mod,Fun,Arity,Arg), answer_fun(Arg)}],
-     From ! {response, ok},
-     case Type of
-  in_order ->
-      program_mock([FunDef | InOrder], OutOfOrder, Stub);
-  out_of_order ->
-      program_mock(InOrder, [FunDef | OutOfOrder], Stub);
-  stub ->
-      program_mock(InOrder, OutOfOrder, [FunDef | Stub])
-     end;
+	{From, {expect, Type, Mod, Fun, Arity, Arg}} ->
+	    FunDef = [{Mod, Fun, Arity}
+		      | {filter_fun(Mod,Fun,Arity,Arg), answer_fun(Arg)}],
+	    From ! {response, ok},
+	    case Type of
+		in_order ->
+		    program_mock([FunDef | InOrder], OutOfOrder, Stub);
+		out_of_order ->
+		    program_mock(InOrder, [FunDef | OutOfOrder], Stub);
+		stub ->
+		    program_mock(InOrder, OutOfOrder, [FunDef | Stub])
+	    end;
 
- {From, replay}  ->
-     Self = pid_to_list(self()),
-      Combined = InOrder ++ OutOfOrder ++ Stub,
-      ModuleSet = extract_module_set(Combined),
-      sets:fold( fun (Mod, _) ->
-          FunsOfModSet = sets:from_list(
-      lists:foldl(
-        fun([{M,F,A}|_], Acc) ->
-         if Mod == M -> [{F,A}|Acc];
-            true -> Acc
-         end
-        end, [], Combined)),
-          HeaderForm = module_header_abstract_form(Mod),
-          FunctionForms = sets:fold(
-       fun({F,A},FFAcc) ->
-        [fundef_to_abstract_meta_form(Self, Mod, F, A)|FFAcc]
-       end,
-       [],
-       FunsOfModSet),
-          CLRes = compile_and_load_abstract_form(HeaderForm ++ FunctionForms),
-          error_logger:info_msg("mock ~w: created and loaded mock code ~w~n",[self(),CLRes])
-         end,
-         [],
-         ModuleSet),
-       From ! {response, ok},
-     %% spawn a cleanup process that will call the uninstall fun
-     auto_cleanup(fun() ->
-     uninstall(ModuleSet),
-     signal(From, cleanup_finished)
-    end),
-      record_invocations(lists:reverse(InOrder),
-          OutOfOrder,
-          Stub,
-          fun() ->
-           signal(From, invocation_list_empty)
-          end
-         );
- {From, What} ->
-     fail(From, {invalid_state, What})
+	{From, replay}  ->
+	    Self = pid_to_list(self()),
+	    Combined = InOrder ++ OutOfOrder ++ Stub,
+	    ModuleSet = extract_module_set(Combined),
+	    sets:fold(
+	      fun (Mod, _) ->
+		      FunsOfModSet = sets:from_list(
+				       lists:foldl(
+					 fun([{M,F,A}|_], Acc) ->
+						 if Mod == M -> [{F,A}|Acc];
+						    true -> Acc
+						 end
+					 end, [], Combined)),
+		      HeaderForm = module_header_abstract_form(Mod),
+		      FunctionForms = sets:fold(
+					fun({F,A},FFAcc) ->
+						[fundef_to_abstract_meta_form(
+						   Self, Mod, F, A)|FFAcc]
+					end,
+					[],
+					FunsOfModSet),
+		      CLRes = compile_and_load_abstract_form(
+				HeaderForm ++ FunctionForms),
+		      error_logger:info_msg(
+			"mock ~w: created and loaded mock code ~w~n",
+			[self(),CLRes])
+	      end, [], ModuleSet),
+	    From ! {response, ok},
+	    % spawn a cleanup process that will call the uninstall fun
+	    auto_cleanup(
+	      fun() ->
+		      uninstall(ModuleSet),
+		      signal(From, cleanup_finished)
+	      end),
+	    record_invocations(
+	      lists:reverse(InOrder),
+	      OutOfOrder,
+	      Stub,
+	      fun() ->
+		      signal(From, invocation_list_empty)
+	      end);
+	{From, What} ->
+	    fail(From, {invalid_state, What})
     end.
 
 record_invocations([], [], Stub, EmptyFun) when is_function(EmptyFun) ->
