@@ -332,52 +332,64 @@ invocation_event({MockPidStr, Mod, Fun, Arity, Args}) ->
     error_logger:info_msg("mock ~w: invocation: ~w:~w/~w ~w~n",[MockPid, Mod, Fun, Arity, Args]),
     MockPid ! {self(), Mod, Fun, Arity, Args},
     receive
- {mock_process_gaurd__, {return, Answer}} ->
-     Answer;
- {mock_process_gaurd__, {error, E}} ->
-     erlang:error(E);
- {mock_process_gaurd__, {throw, E}} ->
-     throw(E);
- {mock_process_gaurd__, {exit, R}} ->
-     exit(R);
- {mock_process_gaurd__, {function, F}} ->
-     error_logger:info_msg("mock ~w: invoking answerer~n",[MockPid]),
-     R = apply(F,Args),
-     error_logger:info_msg("mock ~w: answerer returned: ~w~n",[MockPid,R]),
-     R;
- {mock_process_gaurd__, {function1, F}} ->
-     error_logger:info_msg("mock ~w: invoking answerer~n",[MockPid]),
-     R = F(Args),
-     error_logger:info_msg("mock ~w: answerer returned: ~w~n",[MockPid,R]),
-     R;
- {mock_process_gaurd__, {rec_msg, P}} ->
-     error_logger:info_msg("mock ~w: receiving message for ~w~n",[MockPid,P]),
-     Msg = receive
-        M ->
-     P ! M
-    end,
-     error_logger:info_msg("mock ~w: message ~w delivered to ~w~n",[MockPid,Msg,P])
+	{mock_process_gaurd__, {return, Answer}} ->
+	    Answer;
+	{mock_process_gaurd__, {error, E}} ->
+	    erlang:error(E);
+	{mock_process_gaurd__, {throw, E}} ->
+	    throw(E);
+	{mock_process_gaurd__, {exit, R}} ->
+	    exit(R);
+	{mock_process_gaurd__, {function, F}} ->
+	    error_logger:info_msg("mock ~w: invoking answerer~n",[MockPid]),
+	    R = apply(F,Args),
+	    error_logger:info_msg(
+	      "mock ~w: answerer returned: ~w~n",[MockPid,R]),
+	    R;
+	{mock_process_gaurd__, {function1, F}} ->
+	    error_logger:info_msg("mock ~w: invoking answerer~n",[MockPid]),
+	    R = F(Args),
+	    error_logger:info_msg(
+	      "mock ~w: answerer returned: ~w~n",[MockPid,R]),
+	    R;
+	{mock_process_gaurd__, {rec_msg, P}} ->
+	    error_logger:info_msg(
+	      "mock ~w: receiving message for ~w~n",[MockPid,P]),
+	    Msg = receive
+		      M ->
+			  P ! M
+		  end,
+	    error_logger:info_msg(
+	      "mock ~w: message ~w delivered to ~w~n",[MockPid,Msg,P])
     end.
 
 seq(A, E) when A > E -> [];
 seq(A, E) -> lists:seq(A,E).
 
 uninstall(ModuleSet) ->
-    lists:map(fun(Mod) ->
-        error_logger:info_msg("Deleting and purging module ~p~n", [Mod]),
-        code:purge(Mod),
-        code:delete(Mod)
-       end, sets:to_list(ModuleSet)).
+    lists:map(
+      fun(Mod) ->
+	      error_logger:info_msg("Deleting and purging module ~p~n", [Mod]),
+	      code:purge(Mod),
+	      code:delete(Mod)
+      end, sets:to_list(ModuleSet)).
 
 auto_cleanup(CleanupFun) ->
-    spawn_link(fun() ->
-         erlang:process_flag(trap_exit, true),
-         error_logger:info_msg("auto cleanup handler ~p waiting for the end...~n", [self()]),
-         receive
-      Msg = {'EXIT', _From, _Reason} ->
-          error_logger:info_msg("auto cleanup handler ~p receive exit message ~p.~n", [self(), Msg]),
-          CleanupFun();
-      _Ather ->
-          error_logger:info_msg("auto cleanup handler ~p received unexpected message  ~p.~n", [self(), _Ather])
-         end
-        end).
+    spawn_link(
+      fun() ->
+	      erlang:process_flag(trap_exit, true),
+	      error_logger:info_msg(
+		"auto cleanup handler ~p waiting for the end...~n", [self()]),
+	      receive
+		  Msg = {'EXIT', _From, _Reason} ->
+		      error_logger:info_msg(
+			"auto cleanup handler ~p receive exit message ~p.~n",
+			[self(), Msg]),
+		      CleanupFun();
+		  _Ather ->
+		      error_logger:info_msg(
+			"auto cleanup handler ~p received "
+			"unexpected message  ~p.~n",
+			[self(), _Ather])
+	      end
+      end).
