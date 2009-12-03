@@ -329,7 +329,8 @@ record_invocations(InOrder, OutOfOrder, Stub, EF) ->
 
 invocation_event({MockPidStr, Mod, Fun, Arity, Args}) ->
     MockPid = list_to_pid(MockPidStr),
-    error_logger:info_msg("mock ~w: invocation: ~w:~w/~w ~w~n",[MockPid, Mod, Fun, Arity, Args]),
+    error_logger:info_msg(
+      "mock ~w: invocation: ~w:~w/~w ~w~n",[MockPid, Mod, Fun, Arity, Args]),
     MockPid ! {self(), Mod, Fun, Arity, Args},
     receive
 	{mock_process_gaurd__, {return, Answer}} ->
