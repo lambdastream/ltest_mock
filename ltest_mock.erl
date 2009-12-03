@@ -171,20 +171,21 @@ module_header_abstract_form(Mod) ->
 
 fundef_to_abstract_meta_form(Self, Mod, FunName, Arity) ->
     Line = 1,
-    Params = [{var, Line, list_to_atom("A" ++ integer_to_list(I))} || I <- seq(1,Arity)],
+    Params = [{var, Line, list_to_atom("A" ++ integer_to_list(I))}
+	      || I <- seq(1,Arity)],
     {function, Line, FunName, Arity,
      [{clause, Line,
        Params, [],
        [{call, Line,
-  {remote, Line, {atom, Line, mock}, {atom, Line, invocation_event}},
-  [{tuple, Line,
-    [{string,Line, Self}, {atom, Line, Mod}, {atom,Line, FunName}, {integer, Line, Arity},
-     lists:foldr(
-       fun(E,R) ->
-        {cons, Line, E, R}
-       end,
-       {nil, Line},
-       Params)]}]}]}]}.
+	 {remote, Line, {atom, Line, mock}, {atom, Line, invocation_event}},
+	 [{tuple, Line,
+	   [{string,Line, Self},
+	    {atom, Line, Mod}, {atom,Line, FunName}, {integer, Line, Arity},
+	    lists:foldr(
+	      fun(E,R) ->
+		      {cons, Line, E, R}
+	      end,
+	      {nil, Line}, Params)]}]}]}]}.
 
 compile_and_load_abstract_form(AbsForm) ->
     CompRes = compile:forms(AbsForm),
