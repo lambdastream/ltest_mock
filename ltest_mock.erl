@@ -126,8 +126,6 @@ await(Atom,To) when is_atom(Atom)->
     end.
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 fail(Pid, Reason) ->
     error_logger:info_msg("mock ~w: failed: ~w~n",[self(), Reason]),
     Pid ! {error, Reason}.
@@ -147,15 +145,15 @@ success() ->
 call(Name, Request) ->
     Name ! {self(), Request},
     receive
- {error, Reason} ->
-     throw({mock_failure, Reason});
- {response, Response} ->
-     Response
+	{error, Reason} ->
+	    throw({mock_failure, Reason});
+	{response, Response} ->
+	    Response
     end.
 
 filter_fun(_, _, _, {Arguments, _}) ->
     fun(Args) ->
-     Args == Arguments
+	    Args == Arguments
     end;
 
 filter_fun(_, _, _, {custom, Matcher, _}) ->
@@ -169,7 +167,7 @@ answer_fun({custom, _, Answer}) ->
 
 module_header_abstract_form(Mod) ->
     [{attribute,0,module,Mod},
-    {attribute,0,compile,[export_all]}].
+     {attribute,0,compile,[export_all]}].
 
 fundef_to_abstract_meta_form(Self, Mod, FunName, Arity) ->
     Line = 1,
