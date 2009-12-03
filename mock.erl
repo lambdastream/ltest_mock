@@ -14,8 +14,6 @@
 %%%-------------------------------------------------------------------
 -module(mock).
 
-
--module(mock).
 -export([await/1,await/2,signal_fun/2,new/0, expect/7, expect/6, strict/6, strict/5, o_o/5, stub/5, replay/1, verify/1, verify_after_last_call/1, verify_after_last_call/2, invocation_event/1]).
 
 -author('Sven Heyll').
