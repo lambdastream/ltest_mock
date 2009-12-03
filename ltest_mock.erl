@@ -15,10 +15,13 @@
 -module(ltest_mock).
 -author('Sven Heyll').
 
--export([await/1,await/2,signal_fun/2,new/0, expect/7, expect/6, strict/6, strict/5, o_o/5, stub/5, replay/1, verify/1, verify_after_last_call/1, verify_after_last_call/2, invocation_event/1]).
+-export([await/1,await/2,signal_fun/2,new/0, expect/7, expect/6, strict/6,
+	 strict/5, o_o/5, stub/5, replay/1, verify/1, verify_after_last_call/1,
+	 verify_after_last_call/2, invocation_event/1]).
 
 
-%% use this to create a new instance of a mock process that is in programming phase
+%% use this to create a new instance of a mock process that is in programming
+%% phase
 new() ->
     Mock = spawn_link(fun() -> program_mock([],[],[]) end),
     error_logger:info_msg("mock ~w: created~n", [Mock]),
@@ -26,12 +29,19 @@ new() ->
 
 %% expect has the following options:
 %% Orderchecking types: in_order, out_of_order, stub;
-%% Answering: {return, ...}|{error, ...}|{throw, ...}|{exit, ...}|{rec_msg, Pid}|{function, Fun(Args)} -> RetVal}|{function1, Fun(ArgList)}
-expect(Mock, Type, Module, Function, Arguments, Answer = {AT, _}) when is_list(Arguments), AT==return;AT==error;AT==throw;AT==exit;AT==rec_msg;AT==function;AT==function1 ->
-    call(Mock, {expect, Type, Module, Function, length(Arguments), {Arguments, Answer}}).
+%% Answering: {return, ...}|{error, ...}|{throw, ...}|{exit, ...}
+%%           |{rec_msg, Pid}|{function, Fun(Args) -> RetVal}
+%%           |{function1, Fun(ArgList)}
+expect(Mock, Type, Module, Function, Arguments, Answer = {AT, _})
+  when is_list(Arguments), AT==return;
+       AT==error;AT==throw;AT==exit;AT==rec_msg;AT==function;AT==function1 ->
+    call(
+      Mock,
+      {expect, Type, Module, Function, length(Arguments), {Arguments, Answer}}).
 
 %% this version of expect is suited for useing custom argument matchers
-expect(Mock, Type, Module, Fun, Arity, MatcherFun, Answer) when is_integer(Arity), is_function(MatcherFun)->
+expect(Mock, Type, Module, Fun, Arity, MatcherFun, Answer)
+  when is_integer(Arity), is_function(MatcherFun)->
     call(Mock, {expect, Type, Module, Fun, Arity, {custom, MatcherFun, Answer}}).
 
 %% this is a short cut for expect(.., in_order, ..)
@@ -58,11 +68,13 @@ stub(Mock, M,F,Arity, Answer) when is_integer(Arity) ->
 replay(Mock) ->
     call(Mock, replay).
 
-%% after the verification phase use this to verify that all expected invocations occured
+%% after the verification phase use this to verify that all expected invocations
+%% occured
 verify(Mock) ->
     verify_after_last_call(Mock, 0).
 
-%% after the verification phase use this to verify that all expected invocations occured
+%% after the verification phase use this to verify that all expected invocations
+%% occured
 verify_after_last_call(Mock) ->
     verify_after_last_call(Mock, 1500).
 verify_after_last_call(Mock, TimeOut) ->
