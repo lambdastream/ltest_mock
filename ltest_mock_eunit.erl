@@ -74,7 +74,7 @@ test0a_test_() ->
              [
               ?_test(ltest_mock:replay(Mock)),
               ?_test(testmodule1:mockme1(1,2)),
-              ?_test(testmodule1:mockme2(2,3))
+              ?_test(testmodule1:mockme2(2,3)),
               ?_assertExit(_, testmodule2:mockme1(1,2))
              ]
      end}.
