@@ -70,6 +70,7 @@ replay(Mock) ->
 
 %% after the verification phase use this to verify that all expected invocations
 %% occured
+%% XXX Note that this function has to be executed in the same process as replay
 verify(Mock) ->
     verify_after_last_call(Mock, 0).
 
