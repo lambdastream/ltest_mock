@@ -31,7 +31,7 @@ suite() ->
     test7a_test(),
     io:format("~n~nfinished without unexpected errors! error reports may be ignored!!~n~n~n").
 
-test0_test_() ->
+in_order_test_() ->
     {setup,
      fun () ->
              Mock = ltest_mock:new(),
