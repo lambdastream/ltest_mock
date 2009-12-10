@@ -11,8 +11,6 @@
 -include_lib("eunit/include/eunit.hrl").
 
 suite() ->
-%    test0_test(),
-    test0a_test(),
     test0b_test(),
     test0c_test(),
     test0d_test(),
@@ -57,18 +55,29 @@ in_order_test_() ->
              ]
      end}.
 
-test0a_test() ->
-    Mock = ltest_mock:new(),
-    ltest_mock:expect(Mock, in_order, testmodule1, mockme1, [1,2], {return, ok}),
-    ltest_mock:expect(Mock, in_order, testmodule1, mockme2, [2,3], {return, ok}),
-    ltest_mock:expect(Mock, in_order, testmodule2, mockme2, [3,2], {return, ok}),
-    ltest_mock:expect(Mock, in_order, testmodule2, mockme1, [1,2], {return, ok}),
-
-    ltest_mock:replay(Mock),
-
-    testmodule1:mockme1(1,2),
-    testmodule1:mockme2(2,3),
-    {'EXIT',_} = (catch testmodule2:mockme1(1,2)).
+test0a_test_() ->
+    {setup,
+     fun() ->
+             Mock = ltest_mock:new(),
+             ltest_mock:expect(
+               Mock, in_order, testmodule1, mockme1, [1,2], {return, ok}),
+             ltest_mock:expect(
+               Mock, in_order, testmodule1, mockme2, [2,3], {return, ok}),
+             ltest_mock:expect(
+               Mock, in_order, testmodule2, mockme2, [3,2], {return, ok}),
+             ltest_mock:expect(
+               Mock, in_order, testmodule2, mockme1, [1,2], {return, ok}),
+             Mock
+     end,
+     fun(_) -> ok end,
+     fun(Mock) ->
+             [
+              ?_test(ltest_mock:replay(Mock)),
+              ?_test(testmodule1:mockme1(1,2)),
+              ?_test(testmodule1:mockme2(2,3))
+              ?_assertExit(_, testmodule2:mockme1(1,2))
+             ]
+     end}.
 
 test0b_test() ->
     Mock = ltest_mock:new(),
