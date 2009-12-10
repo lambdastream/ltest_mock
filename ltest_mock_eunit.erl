@@ -43,12 +43,12 @@ test0_test_() ->
                Mock, in_order, testmodule2, mockme2, [3,2], {return, ok}),
              ltest_mock:expect(
                Mock, in_order, testmodule2, mockme1, [1,2], {return, ok}),
-             ltest_mock:replay(Mock),
              Mock
      end,
      fun (_) -> ok end,
      fun (Mock) ->
              [
+              ?_test(ltest_mock:replay(Mock)),
               ?_assertEqual(ok, testmodule1:mockme1(1,2)),
               ?_assertEqual(ok, testmodule1:mockme2(2,3)),
               ?_assertEqual(ok, testmodule2:mockme2(3,2)),
