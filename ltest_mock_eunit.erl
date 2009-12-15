@@ -144,7 +144,7 @@ o_o_test_() ->
              ]
      end}.
 
-test0d_test_() ->
+o_o_not_calling_expected_invocations_raises_error_test_() ->
     {setup,
      fun() ->
              Mock = ltest_mock:new(),
