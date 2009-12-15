@@ -11,7 +11,6 @@
 -include_lib("eunit/include/eunit.hrl").
 
 suite() ->
-    test0e_test(),
     test1_test(),
     test2_test(),
     test3_test(),
@@ -172,30 +171,38 @@ o_o_not_calling_expected_invocations_raises_error_test_() ->
 
 
 
-test0e_test() ->
-    Mock = ltest_mock:new(),
-    ltest_mock:strict(Mock, testmodule1, mockme1, [1,2], {return, ok}),
-    ltest_mock:o_o   (Mock, testmodule1, mockme2, [2,3], {return, ok}),
-    ltest_mock:strict(Mock, testmodule2, mockme2, [3,2], {return, ok}),
-    ltest_mock:o_o   (Mock, testmodule2, mockme1, [1,2], {return, ok}),
+test0e_test_() ->
+    {setup,
+     fun() ->
+             Mock = ltest_mock:new(),
+             ltest_mock:strict(Mock, testmodule1, mockme1, [1,2], {return, ok}),
+             ltest_mock:o_o   (Mock, testmodule1, mockme2, [2,3], {return, ok}),
+             ltest_mock:strict(Mock, testmodule2, mockme2, [3,2], {return, ok}),
+             ltest_mock:o_o   (Mock, testmodule2, mockme1, [1,2], {return, ok}),
 
-    ltest_mock:stub  (Mock, testmodule3, mockme, [666], {return, ok}),
-    ltest_mock:stub  (Mock, testmodule3, mockme, [777], {return, ok}),
-    ltest_mock:stub  (Mock, testmodule3, mockme, [888], {return, ok}),
-    ltest_mock:stub  (Mock, testmodule3, mockme, [999], {return, ok}),
+             ltest_mock:stub  (Mock, testmodule3, mockme, [666], {return, ok}),
+             ltest_mock:stub  (Mock, testmodule3, mockme, [777], {return, ok}),
+             ltest_mock:stub  (Mock, testmodule3, mockme, [888], {return, ok}),
+             ltest_mock:stub  (Mock, testmodule3, mockme, [999], {return, ok}),
+             Mock
+     end,
+     fun(_) -> ok end,
+     fun(Mock) ->
+             [
+              ?_test(ltest_mock:replay(Mock)),
 
-    ltest_mock:replay(Mock),
+              ?_assertMatch(ok, testmodule1:mockme1(1,2)),
+              ?_assertMatch(ok, testmodule2:mockme2(3,2)),
+              ?_assertMatch(ok, testmodule3:mockme(777)),
+              ?_assertMatch(ok, testmodule2:mockme1(1,2)),
+              ?_assertMatch(ok, testmodule3:mockme(777)),
+              ?_assertMatch(ok, testmodule3:mockme(888)),
+              ?_assertMatch(ok, testmodule1:mockme2(2,3)),
+              ?_assertMatch(ok, testmodule3:mockme(777)),
 
-    ok = testmodule1:mockme1(1,2),
-    ok = testmodule2:mockme2(3,2),
-    ok = testmodule3:mockme(777),
-    ok = testmodule2:mockme1(1,2),
-    ok = testmodule3:mockme(777),
-    ok = testmodule3:mockme(888),
-    ok = testmodule1:mockme2(2,3),
-    ok = testmodule3:mockme(777),
-
-    ltest_mock:verify(Mock).
+              ?_test(ltest_mock:verify(Mock))
+             ]
+     end}.
 
 test1_test() ->
     Mock = ltest_mock:new(),
