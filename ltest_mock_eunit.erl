@@ -11,7 +11,6 @@
 -include_lib("eunit/include/eunit.hrl").
 
 suite() ->
-    test0b_test(),
     test0c_test(),
     test0d_test(),
     test0e_test(),
@@ -94,20 +93,34 @@ invalid_invocation_raises_error_test_() ->
              ]
      end}.
 
-test0b_test() ->
-    Mock = ltest_mock:new(),
-    ltest_mock:expect(Mock, in_order, testmodule1, mockme1, [1,2], {return, ok}),
-    ltest_mock:expect(Mock, in_order, testmodule1, mockme2, [2,3], {return, ok}),
-    ltest_mock:expect(Mock, in_order, testmodule2, mockme2, [3,2], {return, ok}),
-    ltest_mock:expect(Mock, in_order, testmodule2, mockme1, [1,2], {return, ok}),
+test0b_test_() ->
+    {setup,
+     fun() ->
+             Mock = ltest_mock:new(),
+             ltest_mock:expect(
+               Mock, in_order, testmodule1, mockme1, [1,2], {return, ok}),
+             ltest_mock:expect(
+               Mock, in_order, testmodule1, mockme2, [2,3], {return, ok}),
+             ltest_mock:expect(
+               Mock, in_order, testmodule2, mockme2, [3,2], {return, ok}),
+             ltest_mock:expect(
+               Mock, in_order, testmodule2, mockme1, [1,2], {return, ok}),
+             unlink(Mock),
+             Mock
+     end,
+     fun(_) -> ok end,
+     fun(Mock) ->
+             [
+              ?_test(ltest_mock:replay(Mock)),
+              ?_test(testmodule1:mockme1(1,2)),
+              ?_test(testmodule1:mockme2(2,3)),
+              ?_test(testmodule2:mockme2(3,2)),
 
-    ltest_mock:replay(Mock),
-
-    testmodule1:mockme1(1,2),
-    testmodule1:mockme2(2,3),
-    testmodule2:mockme2(3,2),
-
-    {error, _} = ltest_mock:verify(Mock).
+              ?_assertThrow(
+                 {mock_failure, {expected_invocations_missing, _}},
+                 ltest_mock:verify(Mock))
+             ]
+     end}.
 
 test0c_test() ->
     Mock = ltest_mock:new(),
