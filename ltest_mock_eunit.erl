@@ -72,6 +72,10 @@ test0a_test_() ->
                Mock, in_order, testmodule2, mockme2, [3,2], {return, ok}),
              ltest_mock:expect(
                Mock, in_order, testmodule2, mockme1, [1,2], {return, ok}),
+
+             % XXX We have to unlink the mock here or the faulty call in the
+             % test will kill the testing process
+             unlink(Mock),
              Mock
      end,
      fun(_) -> ok end,
@@ -80,6 +84,10 @@ test0a_test_() ->
               ?_test(ltest_mock:replay(Mock)),
               ?_test(testmodule1:mockme1(1,2)),
               ?_test(testmodule1:mockme2(2,3)),
+
+              % XXX The mock dies badly because of this call, thus killing the
+              % testing process and ruining the test if not unlinked in the
+              % setup
               ?_assertExit(_, testmodule2:mockme1(1,2))
              ]
      end}.
