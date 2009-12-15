@@ -46,11 +46,16 @@ in_order_test_() ->
      fun (_) -> ok end,
      fun (Mock) ->
              [
+              % XXX We cannot call replay in the setup since verify must be
+              % called in the  same process
               ?_test(ltest_mock:replay(Mock)),
+
               ?_assertEqual(ok, testmodule1:mockme1(1,2)),
               ?_assertEqual(ok, testmodule1:mockme2(2,3)),
               ?_assertEqual(ok, testmodule2:mockme2(3,2)),
               ?_assertEqual(ok, testmodule2:mockme1(1,2)),
+
+              % This funcion hangs when not called in the same process as verify
               ?_test(ltest_mock:verify(Mock))
              ]
      end}.
