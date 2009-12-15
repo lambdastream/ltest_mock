@@ -60,7 +60,7 @@ in_order_test_() ->
              ]
      end}.
 
-test0a_test_() ->
+invalid_invocation_raises_error_test_() ->
     {setup,
      fun() ->
              Mock = ltest_mock:new(),
