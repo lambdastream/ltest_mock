@@ -88,7 +88,9 @@ test0a_test_() ->
               % XXX The mock dies badly because of this call, thus killing the
               % testing process and ruining the test if not unlinked in the
               % setup
-              ?_assertExit(_, testmodule2:mockme1(1,2))
+              ?_assertError(
+                 {unexpected_invocation, {_Pid, testmodule2, mockme1, 2, [1,2]}},
+                 testmodule2:mockme1(1,2))
              ]
      end}.
 
