@@ -171,7 +171,7 @@ o_o_not_calling_expected_invocations_raises_error_test_() ->
 
 
 
-test0e_test_() ->
+stub_test_() ->
     {setup,
      fun() ->
              Mock = ltest_mock:new(),
