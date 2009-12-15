@@ -93,7 +93,7 @@ invalid_invocation_raises_error_test_() ->
              ]
      end}.
 
-test0b_test_() ->
+not_calling_expected_invocations_raises_error_test_() ->
     {setup,
      fun() ->
              Mock = ltest_mock:new(),
