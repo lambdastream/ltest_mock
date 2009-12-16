@@ -231,7 +231,6 @@ strict_error_test_() ->
              Mock = ltest_mock:new(),
              ltest_mock:strict(
                Mock, testmodule2, mockme1, [666], {error, end_of_times}),
-             unlink(Mock),
              Mock
      end,
      fun(_) -> ok end,
