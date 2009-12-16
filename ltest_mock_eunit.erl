@@ -284,7 +284,7 @@ strict_wrong_spec_raises_function_clause_() ->
      fun() ->
              ltest_mock:new()
      end,
-     fun(Mock) -> exit(Mock, kill) end,
+     mock_cleanup(),
      fun(Mock) ->
              ?_assertError(
                 function_clause,
@@ -359,3 +359,12 @@ test7a_test() ->
        end}),
     ltest_mock:replay(Mock),
     {'EXIT',_} = (catch testmodule1:mockme1({qXYZ, 1,2,3})).
+
+%%%-------------------------------------------------------------------
+%%% Common functions
+%%%-------------------------------------------------------------------
+mock_cleanup() ->
+    fun (Mock) ->
+            exit(Mock, kill)
+    end.
+
