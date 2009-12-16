@@ -13,7 +13,6 @@
 suite() ->
     verify_test(),
     verify_without_spec_fails_test(),
-    test7a_test(),
     io:format("~n~nfinished without unexpected errors! error reports may be ignored!!~n~n~n").
 
 in_order_test_() ->
@@ -375,20 +374,31 @@ expect_matcher_fun_test_test_() ->
              ]
      end}.
 
-test7a_test() ->
-    Mock = ltest_mock:new(),
-    ltest_mock:expect(
-      Mock, in_order, testmodule1, mockme1, 1,
-      % hier fehlen die obligatorischen Klammern
-      fun({qXYZ, D, B, A}) when A >= B andalso B >= D ->
-              true
-      end,
-      {function,
-       fun({qXYZ, D, B, A}) ->
-               [B,D|A]
-       end}),
-    ltest_mock:replay(Mock),
-    {'EXIT',_} = (catch testmodule1:mockme1({qXYZ, 1,2,3})).
+expect_matcher_fun_error_throws_exception_test_() ->
+    {setup,
+     fun() ->
+             Mock = ltest_mock:new(),
+             ltest_mock:expect(
+               Mock, in_order, testmodule1, mockme1, 1,
+               % hier fehlen die obligatorischen Klammern
+               fun({qXYZ, D, B, A}) when A >= B andalso B >= D ->
+                       true;
+                  (_) -> false
+               end,
+               {function, fun({qXYZ, D, B, A}) -> [B,D|A] end}),
+             unlink(Mock),
+             Mock
+     end,
+     mock_cleanup(),
+     fun(Mock) ->
+             [
+              ?_test(ltest_mock:replay(Mock)),
+              ?_assertError(
+                 {unexpected_invocation,
+                  {_Pid, testmodule1, mockme1, 1, [{qXYZ, 1, 2, 3}]}},
+                 testmodule1:mockme1({qXYZ, 1,2,3}))
+              ]
+     end}.
 
 %%%-------------------------------------------------------------------
 %%% Common functions
