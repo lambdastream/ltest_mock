@@ -12,7 +12,7 @@
 
 suite() ->
     verify_test(),
-    test4_test(),
+    verify_without_spec_fails_test(),
     test4a_test(),
     test5_test(),
     test6_test(),
@@ -275,7 +275,7 @@ strict_exit_test_() ->
              ]
      end}.
 
-test4_test() ->
+verify_without_spec_fails_test() ->
     Mock = ltest_mock:new(),
     ?assertThrow(
        {mock_failure, {invalid_state, verify}},ltest_mock:verify(Mock)).
