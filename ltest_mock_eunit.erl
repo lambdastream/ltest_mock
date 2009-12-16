@@ -12,7 +12,6 @@
 
 suite() ->
     verify_test(),
-    test3_test(),
     test3a_test(),
     test3b_test(),
     test4_test(),
@@ -227,17 +226,22 @@ strict_unexpected_invocation_throws_exception_test_() ->
              ]
      end}.
 
-test3_test() ->
-    Mock = ltest_mock:new(),
-    ltest_mock:strict(Mock, testmodule2, mockme1, [666], {error, end_of_times}),
-    ltest_mock:replay(Mock),
-    try testmodule2:mockme1(666) of
-        _ ->
-            exit(error_expected)
-    catch
-        error:end_of_times ->
-            ok
-    end.
+test3_test_() ->
+    {setup,
+     fun() ->
+             Mock = ltest_mock:new(),
+             ltest_mock:strict(
+               Mock, testmodule2, mockme1, [666], {error, end_of_times}),
+             unlink(Mock),
+             Mock
+     end,
+     fun(_) -> ok end,
+     fun(Mock) ->
+             [
+              ?_test(ltest_mock:replay(Mock)),
+              ?_assertError(end_of_times, testmodule2:mockme1(666))
+             ]
+     end}.
 
 test3a_test() ->
     Mock = ltest_mock:new(),
