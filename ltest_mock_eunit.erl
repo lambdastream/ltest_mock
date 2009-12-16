@@ -13,7 +13,6 @@
 suite() ->
     verify_test(),
     verify_without_spec_fails_test(),
-    test6_test(),
     test6a_test(),
     test7_test(),
     test7a_test(),
@@ -319,17 +318,23 @@ rec_msg_test_() ->
 
 
 
-test6_test() ->
-    Mock = ltest_mock:new(),
-    ltest_mock:o_o(
-      Mock, testmodule1, mockme1, [1,2],
-      {function, fun(X,Y) ->
-                         X + Y
-                 end}),
-    ltest_mock:replay(Mock),
-    R = testmodule1:mockme1(1,2),
-    ltest_mock:verify(Mock),
-    3 = R.
+o_o_fun_test_() ->
+    {setup,
+     fun() ->
+             Mock = ltest_mock:new(),
+             ltest_mock:o_o(
+               Mock, testmodule1, mockme1, [1,2],
+               {function, fun(X,Y) -> X + Y end}),
+             Mock
+     end,
+     mock_cleanup(),
+     fun(Mock) ->
+             [
+              ?_test(ltest_mock:replay(Mock)),
+              ?_assertEqual(3, testmodule1:mockme1(1,2)),
+              ?_test(ltest_mock:verify(Mock))
+             ]
+     end}.
 
 test6a_test() ->
     Mock = ltest_mock:new(),
