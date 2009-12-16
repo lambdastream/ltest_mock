@@ -209,7 +209,7 @@ verify_test() ->
     ltest_mock:verify(Mock).
 
 %error expected
-test2_test_() ->
+strict_unexpected_invocation_throws_exception_test_() ->
     {setup,
      fun() ->
              Mock = ltest_mock:new(),
