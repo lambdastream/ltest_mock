@@ -13,7 +13,6 @@
 suite() ->
     verify_test(),
     verify_without_spec_fails_test(),
-    test6a_test(),
     test7_test(),
     test7a_test(),
     io:format("~n~nfinished without unexpected errors! error reports may be ignored!!~n~n~n").
@@ -336,16 +335,23 @@ o_o_fun_test_() ->
              ]
      end}.
 
-test6a_test() ->
-    Mock = ltest_mock:new(),
-    ltest_mock:stub(
-      Mock, testmodule1, mockme1, [1,2],
-      {function, fun(_,_) ->
-                         erlang:error(test)
-                 end}),
-    ltest_mock:replay(Mock),
-    {'EXIT',_} = (catch testmodule1:mockme1(1,2)),
-    ltest_mock:verify(Mock).
+stub_fun_can_raise_errors_() ->
+    {setup,
+     fun() ->
+             Mock = ltest_mock:new(),
+             ltest_mock:stub(
+               Mock, testmodule1, mockme1, [1,2],
+               {function, fun(_,_) -> erlang:error(test) end}),
+             Mock
+     end,
+     mock_cleanup(),
+     fun(Mock) ->
+             [
+              ?_test(ltest_mock:replay(Mock)),
+              ?_assertError(test, testmodule1:mockme1(1,2)),
+              ?_test(ltest_mock:verify(Mock))
+             ]
+     end}.
 
 test7_test() ->
     Mock = ltest_mock:new(),
