@@ -12,7 +12,6 @@
 
 suite() ->
     verify_test(),
-    test3a_test(),
     test3b_test(),
     test4_test(),
     test4a_test(),
@@ -244,17 +243,21 @@ strict_error_test_() ->
              ]
      end}.
 
-test3a_test() ->
-    Mock = ltest_mock:new(),
-    ltest_mock:o_o(Mock, testmodule2, mockme1, [666], {throw, end_of_times}),
-    ltest_mock:replay(Mock),
-    try testmodule2:mockme1(666) of
-        _ ->
-            exit(error_expected)
-    catch
-        throw:end_of_times ->
-            ok
-    end.
+test3a_test_() ->
+    {setup,
+     fun() ->
+             Mock = ltest_mock:new(),
+             ltest_mock:o_o(
+               Mock, testmodule2, mockme1, [666], {throw, end_of_times}),
+             Mock
+     end,
+     fun(_) -> ok end,
+     fun(Mock) ->
+             [
+              ?_test(ltest_mock:replay(Mock)),
+              ?_assertThrow(end_of_times, testmodule2:mockme1(666))
+             ]
+     end}.
 
 test3b_test() ->
     Mock = ltest_mock:new(),
