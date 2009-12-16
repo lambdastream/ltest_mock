@@ -11,7 +11,7 @@
 -include_lib("eunit/include/eunit.hrl").
 
 suite() ->
-    test1_test(),
+    verify_test(),
     test2_test(),
     test3_test(),
     test3a_test(),
@@ -204,7 +204,7 @@ stub_test_() ->
              ]
      end}.
 
-test1_test() ->
+verify_test() ->
     Mock = ltest_mock:new(),
     ltest_mock:replay(Mock),
     ltest_mock:verify(Mock).
