@@ -243,7 +243,7 @@ strict_error_test_() ->
              ]
      end}.
 
-test3a_test_() ->
+strict_throw_test_() ->
     {setup,
      fun() ->
              Mock = ltest_mock:new(),
