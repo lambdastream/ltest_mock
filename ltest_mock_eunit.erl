@@ -239,7 +239,8 @@ test3_test_() ->
      fun(Mock) ->
              [
               ?_test(ltest_mock:replay(Mock)),
-              ?_assertError(end_of_times, testmodule2:mockme1(666))
+              ?_assertError(end_of_times, testmodule2:mockme1(666)),
+              ?_test(ltest_mock:verify(Mock))
              ]
      end}.
 
