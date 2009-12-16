@@ -309,7 +309,7 @@ rec_msg_test_() ->
                      TestPid = spawn(testmodule1,mockme1,[1,2]),
                      TestPid ! test,
                      receive
-                         tests ->
+                         test ->
                              ok
                      end
                  end),
