@@ -34,7 +34,7 @@ in_order_test_() ->
                Mock, in_order, testmodule2, mockme1, [1,2], {return, ok}),
              Mock
      end,
-     fun (_) -> ok end,
+     mock_cleanup(),
      fun (Mock) ->
              [
               % XXX We cannot call replay in the setup since verify must be
@@ -69,7 +69,7 @@ invalid_invocation_raises_error_test_() ->
              unlink(Mock),
              Mock
      end,
-     fun(_) -> ok end,
+     mock_cleanup(),
      fun(Mock) ->
              [
               ?_test(ltest_mock:replay(Mock)),
@@ -100,7 +100,7 @@ not_calling_expected_invocations_raises_error_test_() ->
              unlink(Mock),
              Mock
      end,
-     fun(_) -> ok end,
+     mock_cleanup(),
      fun(Mock) ->
              [
               ?_test(ltest_mock:replay(Mock)),
@@ -124,7 +124,7 @@ o_o_test_() ->
              ltest_mock:o_o   (Mock, testmodule2, mockme1, [1,2], {return, ok}),
              Mock
      end,
-     fun(_) -> ok end,
+     mock_cleanup(),
      fun(Mock) ->
              [
               ?_test(ltest_mock:replay(Mock)),
@@ -149,7 +149,7 @@ o_o_not_calling_expected_invocations_raises_error_test_() ->
              unlink(Mock),
              Mock
      end,
-     fun(_) -> ok end,
+     mock_cleanup(),
      fun(Mock) ->
              [
               ?_test(ltest_mock:replay(Mock)),
@@ -181,7 +181,7 @@ stub_test_() ->
              ltest_mock:stub  (Mock, testmodule3, mockme, [999], {return, ok}),
              Mock
      end,
-     fun(_) -> ok end,
+     mock_cleanup(),
      fun(Mock) ->
              [
               ?_test(ltest_mock:replay(Mock)),
@@ -213,7 +213,7 @@ strict_unexpected_invocation_throws_exception_test_() ->
              unlink(Mock),
              Mock
      end,
-     fun(_) -> ok end,
+     mock_cleanup(),
      fun(Mock) ->
              [
               ?_test(ltest_mock:replay(Mock)),
@@ -231,7 +231,7 @@ strict_error_test_() ->
                Mock, testmodule2, mockme1, [666], {error, end_of_times}),
              Mock
      end,
-     fun(_) -> ok end,
+     mock_cleanup(),
      fun(Mock) ->
              [
               ?_test(ltest_mock:replay(Mock)),
@@ -248,7 +248,7 @@ strict_throw_test_() ->
                Mock, testmodule2, mockme1, [666], {throw, end_of_times}),
              Mock
      end,
-     fun(_) -> ok end,
+     mock_cleanup(),
      fun(Mock) ->
              [
               ?_test(ltest_mock:replay(Mock)),
@@ -265,7 +265,7 @@ strict_exit_test_() ->
                Mock, testmodule2, mockme1, [666], {exit, end_of_times}),
              Mock
      end,
-     fun(_) -> ok end,
+     mock_cleanup(),
      fun(Mock) ->
              [
               ?_test(ltest_mock:replay(Mock)),
@@ -363,6 +363,8 @@ test7a_test() ->
 %%%-------------------------------------------------------------------
 %%% Common functions
 %%%-------------------------------------------------------------------
+
+%% This cleanup function avoids leaking Mocks in some tests
 mock_cleanup() ->
     fun (Mock) ->
             exit(Mock, kill)
