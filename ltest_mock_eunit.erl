@@ -12,7 +12,6 @@
 
 suite() ->
     verify_test(),
-    test2_test(),
     test3_test(),
     test3a_test(),
     test3b_test(),
@@ -210,12 +209,23 @@ verify_test() ->
     ltest_mock:verify(Mock).
 
 %error expected
-test2_test() ->
-    Mock = ltest_mock:new(),
-    ltest_mock:strict(Mock, testmodule, mockme, [1,2],{return, ok}),
-    ltest_mock:replay(Mock),
-    {error, _} = ltest_mock:verify(Mock).
-
+test2_test_() ->
+    {setup,
+     fun() ->
+             Mock = ltest_mock:new(),
+             ltest_mock:strict(Mock, testmodule, mockme, [1,2],{return, ok}),
+             unlink(Mock),
+             Mock
+     end,
+     fun(_) -> ok end,
+     fun(Mock) ->
+             [
+              ?_test(ltest_mock:replay(Mock)),
+              ?_assertThrow(
+                 {mock_failure, {expected_invocations_missing, _}},
+                 ltest_mock:verify(Mock))
+             ]
+     end}.
 
 test3_test() ->
     Mock = ltest_mock:new(),
