@@ -13,7 +13,6 @@
 suite() ->
     verify_test(),
     verify_without_spec_fails_test(),
-    test7_test(),
     test7a_test(),
     io:format("~n~nfinished without unexpected errors! error reports may be ignored!!~n~n~n").
 
@@ -353,20 +352,28 @@ stub_fun_can_raise_errors_() ->
              ]
      end}.
 
-test7_test() ->
-    Mock = ltest_mock:new(),
-    ltest_mock:expect(
-      Mock, in_order, testmodule1, mockme1, 1,
-      fun([{qXYZ, D, B, A}]) when A >= B andalso B >= D ->
-              true
-      end,
-      {function, fun({qXYZ, D, B, A}) ->
-                         [B,D|A]
-                 end}),
-    ltest_mock:replay(Mock),
-    L = testmodule1:mockme1({qXYZ, 1,2,3}),
-    ltest_mock:verify(Mock),
-    [2,1|3] = L.
+expect_matcher_fun_test_test_() ->
+    {setup,
+     fun() ->
+             Mock = ltest_mock:new(),
+             ltest_mock:expect(
+               Mock, in_order, testmodule1, mockme1, 1,
+               fun([{qXYZ, D, B, A}]) when A >= B andalso B >= D ->
+                       true
+               end,
+               {function, fun({qXYZ, D, B, A}) ->
+                                  [B,D|A]
+                          end}),
+             Mock
+     end,
+     mock_cleanup(),
+     fun(Mock) ->
+             [
+              ?_test(ltest_mock:replay(Mock)),
+              ?_assertMatch([2,1|3], testmodule1:mockme1({qXYZ, 1,2,3})),
+              ?_test(ltest_mock:verify(Mock))
+             ]
+     end}.
 
 test7a_test() ->
     Mock = ltest_mock:new(),
