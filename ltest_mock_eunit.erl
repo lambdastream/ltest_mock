@@ -254,7 +254,8 @@ strict_throw_test_() ->
      fun(Mock) ->
              [
               ?_test(ltest_mock:replay(Mock)),
-              ?_assertThrow(end_of_times, testmodule2:mockme1(666))
+              ?_assertThrow(end_of_times, testmodule2:mockme1(666)),
+              ?_test(ltest_mock:verify(Mock))
              ]
      end}.
 
