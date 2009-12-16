@@ -13,7 +13,6 @@
 suite() ->
     verify_test(),
     verify_without_spec_fails_test(),
-    test5_test(),
     test6_test(),
     test6a_test(),
     test7_test(),
@@ -293,19 +292,32 @@ strict_wrong_spec_raises_function_clause_() ->
                   {hier_steht_was_falsches, xxx}))
      end}.
 
-test5_test() ->
-    Mock = ltest_mock:new(),
-    ltest_mock:strict(Mock, testmodule1, mockme1, [1,2], {rec_msg, self()}),
-    ltest_mock:replay(Mock),
-    TestPid = spawn(testmodule1,mockme1,[1,2]),
-    TestPid ! test,
-    receive
-        test ->
-            ok,
-            ltest_mock:verify(Mock)
-    after 1000 ->
-            error
-    end.
+rec_msg_test_() ->
+    {setup,
+     fun() ->
+             ltest_mock:new()
+     end,
+     mock_cleanup(),
+     fun(Mock) ->
+             [
+              ?_test(
+                 ltest_mock:strict(
+                   Mock, testmodule1, mockme1, [1,2], {rec_msg, self()})),
+              ?_test(ltest_mock:replay(Mock)),
+              ?_test(
+                 begin
+                     TestPid = spawn(testmodule1,mockme1,[1,2]),
+                     TestPid ! test,
+                     receive
+                         tests ->
+                             ok
+                     end
+                 end),
+              ?_test(ltest_mock:verify(Mock))
+             ]
+     end}.
+
+
 
 test6_test() ->
     Mock = ltest_mock:new(),
