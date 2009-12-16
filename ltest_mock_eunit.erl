@@ -13,7 +13,7 @@
 suite() ->
     verify_test(),
     verify_without_spec_fails_test(),
-    test4a_test(),
+    strict_wrong_spec_raises_function_clause(),
     test5_test(),
     test6_test(),
     test6a_test(),
@@ -280,12 +280,12 @@ verify_without_spec_fails_test() ->
     ?assertThrow(
        {mock_failure, {invalid_state, verify}},ltest_mock:verify(Mock)).
 
-test4a_test() ->
+strict_wrong_spec_raises_function_clause() ->
     Mock = ltest_mock:new(),
-    {'EXIT',_} =
-        (catch ltest_mock:strict(
-                 Mock, testmodule1, mockme1, [1,2],
-                 {hier_steht_was_falsches, xxx})).
+    ?assertError(
+       function_clause,
+       ltest_mock:strict(
+         Mock, testmodule1, mockme1, [1,2], {hier_steht_was_falsches, xxx})).
 
 test5_test() ->
     Mock = ltest_mock:new(),
