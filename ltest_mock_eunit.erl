@@ -277,7 +277,8 @@ strict_exit_test_() ->
 
 test4_test() ->
     Mock = ltest_mock:new(),
-    {error,_} = ltest_mock:verify(Mock).
+    ?assertThrow(
+       {mock_failure, {invalid_state, verify}},ltest_mock:verify(Mock)).
 
 test4a_test() ->
     Mock = ltest_mock:new(),
