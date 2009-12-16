@@ -226,7 +226,7 @@ strict_unexpected_invocation_throws_exception_test_() ->
              ]
      end}.
 
-test3_test_() ->
+strict_error_test_() ->
     {setup,
      fun() ->
              Mock = ltest_mock:new(),
