@@ -282,7 +282,11 @@ record_invocations(InOrder, OutOfOrder, Stub, EF) ->
 		    record_invocations(IOR, OutOfOrder, Stub, EF);
 
 		false ->
-		    case lists:splitwith(InvMatcher, OutOfOrder) of
+		    OutMatcher = fun(List) ->
+					 {[X || X <- List, InvMatcher(X)],
+					  [X || X <- List, not InvMatcher(X)]}
+				 end,
+		    case OutMatcher(OutOfOrder) of
 			{[OOODef|Rest1],Rest2} ->
 			    [_|{_,Function}] = OOODef,
 			    ProcUnderTestPid ! {mock_process_gaurd__, Function},
