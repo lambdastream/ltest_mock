@@ -165,6 +165,8 @@ o_o_bug252_test_() ->
 	     Mock = ltest_mock:new(),
 	     ltest_mock:o_o(Mock, testmodule1, mockme1, [1,3], {return, ok}),
 	     ltest_mock:o_o(Mock, testmodule1, mockme1, [1,2], {return, ok}),
+	     ltest_mock:o_o(Mock, testmodule1, mockme1, [1,5], {return, ok}),
+	     ltest_mock:o_o(Mock, testmodule1, mockme1, [1,1], {return, ok}),
 	     unlink(Mock),
 	     Mock
      end,
@@ -172,7 +174,9 @@ o_o_bug252_test_() ->
      fun(Mock) ->
 	     [
 	      ?_test(ltest_mock:replay(Mock)),
+	      ?_test(testmodule1:mockme1(1,5)), 
 	      ?_test(testmodule1:mockme1(1,3)),
+	      ?_test(testmodule1:mockme1(1,1)),
 	      ?_test(testmodule1:mockme1(1,2)),
 	      ?_test(ltest_mock:verify(Mock))
 	     ]
