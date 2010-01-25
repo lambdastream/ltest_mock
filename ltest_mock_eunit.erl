@@ -159,7 +159,24 @@ o_o_not_calling_expected_invocations_raises_error_test_() ->
              ]
      end}.
 
-
+o_o_bug252_test_() ->
+    {setup,
+     fun() ->
+	     Mock = ltest_mock:new(),
+	     ltest_mock:o_o(Mock, testmodule1, mockme1, [1,3], {return, ok}),
+	     ltest_mock:o_o(Mock, testmodule1, mockme1, [1,2], {return, ok}),
+	     unlink(Mock),
+	     Mock
+     end,
+     mock_cleanup(),
+     fun(Mock) ->
+	     [
+	      ?_test(ltest_mock:replay(Mock)),
+	      ?_test(testmodule1:mockme1(1,3)),
+	      ?_test(testmodule1:mockme1(1,2)),
+	      ?_test(ltest_mock:verify(Mock))
+	     ]
+     end}.
 
 stub_test_() ->
     {setup,
