@@ -215,6 +215,54 @@ stub_test_() ->
              ]
      end}.
 
+stub_bug257_test_() ->
+    {setup,
+     fun() ->
+	     Mock = ltest_mock:new(),
+	     ltest_mock:stub(Mock, testmodule, mockme, [1], {return, ok}),
+	     unlink(Mock),
+	     Mock
+     end,
+     mock_cleanup(),
+     fun(Mock) ->
+             [
+              ?_test(ltest_mock:replay(Mock)),
+	      ?_assertMatch(ok, testmodule:mockme(1)),
+	      ?_assertMatch(ok, testmodule:mockme(1)),
+	      ?_assertMatch(ok, testmodule:mockme(1)),
+	      ?_assertError(
+                 {unexpected_invocation, {_Pid, testmodule, mockme, 1, [2]}},
+		 testmodule:mockme(2)),
+              ?_test(ltest_mock:verify(Mock))
+             ]
+     end}.
+
+stub_bug257_2_test_() ->
+    {setup,
+     fun() ->
+	     Mock = ltest_mock:new(),
+	     ltest_mock:expect(Mock, stub, testmodule, mockme, 2,
+			       fun([_, 2]) ->
+				       true;
+				  ([_, _])->
+				       false
+			       end,
+			       {return, ok}),
+	     unlink(Mock),
+	     Mock
+     end,
+     mock_cleanup(),
+     fun(Mock) ->
+             [
+              ?_test(ltest_mock:replay(Mock)),
+	      ?_assertMatch(ok, testmodule:mockme(2, 2)),
+	      ?_assertError(
+		 {unexpected_invocation, {_Pid, testmodule, mockme, 2, [1,4]}},
+		 testmodule:mockme(1, 4)),
+              ?_test(ltest_mock:verify(Mock))
+             ]
+     end}.
+
 verify_test() ->
     Mock = ltest_mock:new(),
     ltest_mock:replay(Mock),
