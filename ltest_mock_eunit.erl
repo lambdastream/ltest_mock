@@ -278,7 +278,8 @@ stub_bug257_3_test_() ->
 	      ?_assertMatch(ok, testmodule:mockme(1)),
 	      ?_assertMatch(ok, testmodule:mockme(1)),
 	      ?_assertMatch(ok, testmodule:mockme2(10)),
-	      ?_test(ltest_mock:replay(Mock))
+	      ?_assertThrow({mock_failure, {invalid_state, _}},
+			    ltest_mock:replay(Mock))
              ]
      end}.
 
