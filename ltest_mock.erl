@@ -80,7 +80,13 @@ verify_after_last_call(Mock) ->
     verify_after_last_call(Mock, 1500).
 verify_after_last_call(Mock, TimeOut) ->
     catch await(invocation_list_empty, TimeOut),
-    call(Mock, verify),
+    try
+	call(Mock, verify, 2000)
+    catch
+	{timeout, verify} ->
+	    error_logger:info_msg("mock ~p: verify finished~n~n~n", [Mock]),
+	    fail(mock_failed_before_verify)
+    end,
     await(cleanup_finished),
     error_logger:info_msg("mock ~p: verify finished~n~n~n", [Mock]).
 
@@ -143,13 +149,23 @@ success() ->
     error_logger:info_msg("mock ~w: successfully finished.~n",[self()]),
     test_passed.
 
+%% @private
+%% @doc Call uses now a timeout, to avoid verify blocks when mock has
+%% died. By now, we don't detect that mock blocks in any other call so
+%% for the rest timeout is infinity.
+%% @end
 call(Name, Request) ->
+    call(Name, Request, infinity).
+
+call(Name, Request, Tout) ->
     Name ! {self(), Request},
     receive
 	{error, Reason} ->
 	    throw({mock_failure, Reason});
 	{response, Response} ->
 	    Response
+    after Tout ->
+	    throw({timeout, Request})
     end.
 
 %% @private
