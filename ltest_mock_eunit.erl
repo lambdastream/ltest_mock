@@ -232,8 +232,7 @@ stub_bug257_test_() ->
 	      ?_assertMatch(ok, testmodule:mockme(1)),
 	      ?_assertError(
                  {unexpected_invocation, {_Pid, testmodule, mockme, 1, [2]}},
-		 testmodule:mockme(2)),
-              ?_test(ltest_mock:verify(Mock))
+		 testmodule:mockme(2))
              ]
      end}.
 
@@ -258,8 +257,7 @@ stub_bug257_2_test_() ->
 	      ?_assertMatch(ok, testmodule:mockme(2, 2)),
 	      ?_assertError(
 		 {unexpected_invocation, {_Pid, testmodule, mockme, 2, [1,4]}},
-		 testmodule:mockme(1, 4)),
-              ?_test(ltest_mock:verify(Mock))
+		 testmodule:mockme(1, 4))
              ]
      end}.
 
