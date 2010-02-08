@@ -229,12 +229,6 @@ extract_module_set(Combined) ->
 %% using in_order, out_of_order and stub.
 %% These definitions are improper lists: [{Mod, Fun, Arity} |
 %% {FilterFun, Answer}]
-%%
-%% Replay creates, compiles and loads modules to replace original modules
-%% by stub. After that spawns a process to cleanup mock after finish
-%% and send the signal 'cleanup_finished', that is expected to receive
-%% in verify call. Calls record_invocations that waits for calls to
-%% modules replaced by mock.
 %% @end
 program_mock(InOrder, OutOfOrder, Stub) ->
     receive
@@ -252,27 +246,37 @@ program_mock(InOrder, OutOfOrder, Stub) ->
 	  end;
       
       {From, replay} ->
-	  Self = pid_to_list(self()),
-	  Combined = InOrder ++ OutOfOrder ++ Stub,
-	  ModuleSet = extract_module_set(Combined),
-	  replace_modules_by_abstract_forms(Self, Combined, ModuleSet),
-	  From ! {response, ok},
-	  % spawn a cleanup process that will call the uninstall fun
-	  auto_cleanup(
-	    fun () ->
-		    uninstall(ModuleSet),
-		    signal(From, cleanup_finished)
-	    end),
-	  record_invocations(
-	    lists:reverse(InOrder),
-	    OutOfOrder,
-	    Stub,
-	    fun () ->
-		    signal(From, invocation_list_empty)
-	    end);
+	  program_mock_replay(InOrder, OutOfOrder, Stub, From);
       {From, What} ->
 	  fail(From, {invalid_state, What})
     end.
+
+%% @private
+%% @doc Replay creates, compiles and loads modules to replace original modules
+%% by stub. After that spawns a process to cleanup mock after finish
+%% and send the signal 'cleanup_finished', that is expected to receive
+%% in verify call. Calls record_invocations that waits for calls to
+%% modules replaced by mock.
+%% @end
+program_mock_replay(InOrder, OutOfOrder, Stub, From) ->
+    Self = pid_to_list(self()),
+    Combined = InOrder ++ OutOfOrder ++ Stub,
+    ModuleSet = extract_module_set(Combined),
+    replace_modules_by_abstract_forms(Self, Combined, ModuleSet),
+    From ! {response, ok},
+    % spawn a cleanup process that will call the uninstall fun
+    auto_cleanup(
+      fun () ->
+	      uninstall(ModuleSet),
+	      signal(From, cleanup_finished)
+      end),
+    record_invocations(
+      lists:reverse(InOrder),
+      OutOfOrder,
+      Stub,
+      fun () ->
+	      signal(From, invocation_list_empty)
+      end).
 
 %% @private
 %% @doc Creates, compiles and loads modules to replace original modules by stub.
