@@ -283,6 +283,25 @@ stub_bug257_3_test_() ->
              ]
      end}.
 
+stub_bug257_4_test_() ->
+    {setup,
+     fun() ->
+	     Mock = ltest_mock:new(),
+	     ltest_mock:expect(Mock, out_of_order, testmodule, mockme2, 1,
+			       fun([a, b]) -> true end, {return, ok}),
+	     unlink(Mock),
+	     Mock
+     end,
+     mock_cleanup(),
+     fun(Mock) ->
+             [
+              ?_test(ltest_mock:replay(Mock)),
+	      ?_assertThrow({mock_failure,{matching_function_is_incorrent, _}},
+			    testmodule:mockme2(3))	    
+             ]
+     end}.
+
+
 verify_test() ->
     Mock = ltest_mock:new(),
     ltest_mock:replay(Mock),
