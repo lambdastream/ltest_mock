@@ -307,6 +307,25 @@ verify_test() ->
     ltest_mock:replay(Mock),
     ltest_mock:verify(Mock).
 
+verify_after_fail_test_() ->
+    {setup,
+     fun() ->
+             Mock = ltest_mock:new(),
+             ltest_mock:strict(Mock, testmodule, mockme, [1,2],{return, ok}),
+             unlink(Mock),
+             Mock
+     end,
+     mock_cleanup(),
+     fun(Mock) ->
+             [
+              ?_test(ltest_mock:replay(Mock)),
+              ?_assertError(
+		 {unexpected_invocation, {_Pid, testmodule, mockme, 2, [1,4]}},
+		 testmodule:mockme(1, 4)),
+	      ?_test(ltest_mock:verify(Mock))
+             ]
+     end}.
+
 %error expected
 strict_unexpected_invocation_throws_exception_test_() ->
     {setup,
