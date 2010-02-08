@@ -336,9 +336,7 @@ record_invocations(InOrder, OutOfOrder, Stub, EF) ->
 
 expect_invocation(InOrder, OutOfOrder, Stub, EF,
 		  Invocation = {ProcUnderTestPid, Mod, Fun, Arity, Args}) ->
-    InvMatcher = fun ([{M, F, A}| {Pred, _}]) ->
-			 {M, F, A} == {Mod, Fun, Arity} andalso Pred(Args)
-		 end,
+    InvMatcher =  invocation_matcher(Mod, Fun, Arity, Args),
     try
       case InOrder of
 	[Test| _] -> InvMatcher(Test);
@@ -359,12 +357,7 @@ expect_invocation(InOrder, OutOfOrder, Stub, EF,
 		  [StubDef| _] ->
 		      stub_invocation(InOrder, OutOfOrder, Stub, EF,
 				      ProcUnderTestPid, StubDef);
-		  _ ->
-		      EF(),
-		      Reason = {unexpected_invocation, Invocation},
-		      ProcUnderTestPid ! {mock_process_gaurd__,
-					  {error, Reason}},
-		      fail(Reason)
+		  _ -> unexpected_invocation(EF, Invocation, ProcUnderTestPid)
 		end
 	  end
     catch
@@ -375,6 +368,25 @@ expect_invocation(InOrder, OutOfOrder, Stub, EF,
 	  EF(),
 	  fail(Reason)
     end.
+
+%% @private
+%% @doc Returns invocation function matcher, to check if call is part
+%% of the invocation list. 
+%% @end
+invocation_matcher(Mod, Fun, Arity, Args) ->
+    fun ([{M, F, A}| {Pred, _}]) ->
+	    {M, F, A} == {Mod, Fun, Arity} andalso Pred(Args)
+    end.
+
+%% @private
+%% @doc Unexpected invocation. This makes mock fail
+%% @end
+unexpected_invocation(EF, Invocation, ProcUnderTestPid) ->
+    EF(),
+    Reason = {unexpected_invocation, Invocation},
+    ProcUnderTestPid ! {mock_process_gaurd__,
+			{error, Reason}},
+    fail(Reason).
 
 %% @private
 %% @doc This is part of verify behaviour, checks that there isn't more
