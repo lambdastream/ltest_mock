@@ -365,6 +365,8 @@ expect_invocation(InOrder, OutOfOrder, Stub, EF,
 	      end
       end
     catch
+	{mock_failure, _} = What ->
+	    throw(What);
 	ET:EX ->
 	    matching_function_error(EF, Invocation, ProcUnderTestPid, ET, EX)
     end.
