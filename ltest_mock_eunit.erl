@@ -261,6 +261,27 @@ stub_bug257_2_test_() ->
              ]
      end}.
 
+stub_bug257_3_test_() ->
+    {setup,
+     fun() ->
+	     Mock = ltest_mock:new(),
+	     ltest_mock:strict(Mock, testmodule, mockme2, [10], {return, ok}),
+	     ltest_mock:stub(Mock, testmodule, mockme, [1], {return, ok}),
+	     unlink(Mock),
+	     Mock
+     end,
+     mock_cleanup(),
+     fun(Mock) ->
+             [
+              ?_test(ltest_mock:replay(Mock)),
+	      ?_assertMatch(ok, testmodule:mockme(1)),
+	      ?_assertMatch(ok, testmodule:mockme(1)),
+	      ?_assertMatch(ok, testmodule:mockme(1)),
+	      ?_assertMatch(ok, testmodule:mockme2(10)),
+	      ?_test(ltest_mock:replay(Mock))
+             ]
+     end}.
+
 verify_test() ->
     Mock = ltest_mock:new(),
     ltest_mock:replay(Mock),
