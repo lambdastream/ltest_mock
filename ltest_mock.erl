@@ -52,15 +52,15 @@ strict(Mock, M,F,Arity, Fun, Answer) when is_integer(Arity)->
 strict(Mock, M,F,Args, Answer) ->
     expect(Mock, in_order, M, F, Args, Answer).
 
-%% this is a short cut for expect(.., in_order, ..)
+%% this is a short cut for expect(.., out_of_order, ..)
 o_o(Mock, M,F,Args, Answer) ->
     expect(Mock, out_of_order, M, F, Args, Answer).
 
-%% this is a short cut for expect(.., in_order, ..)
+%% this is a short cut for expect(.., stub, ..)
 stub(Mock, M,F,Args, Answer) when is_list(Args)->
     expect(Mock, stub, M, F, Args, Answer);
 
-%% this is a short cut for expect(.., in_order, ..)
+%% this is a short cut for expect(.., stub, ..)
 stub(Mock, M,F,Arity, Answer) when is_integer(Arity) ->
     expect(Mock, stub, M, F, Arity, fun(_) -> true end, Answer).
 
@@ -152,6 +152,10 @@ call(Name, Request) ->
 	    Response
     end.
 
+%% @private
+%% @doc Returns a function to check arguments.
+%% Doesn't need module, function or arity, why are they args?
+%% @end
 filter_fun(_, _, _, {Arguments, _}) ->
     fun(Args) ->
 	    Args == Arguments
@@ -160,16 +164,26 @@ filter_fun(_, _, _, {Arguments, _}) ->
 filter_fun(_, _, _, {custom, Matcher, _}) ->
     Matcher.
 
+%% @private
+%% @doc Returns the value that has to return the mock when is called
+%% @end
 answer_fun({_, Answer}) ->
     Answer;
 
 answer_fun({custom, _, Answer}) ->
     Answer.
 
+%% @private
+%% @doc Headers of module abstract form, uses module and compile
+%% @end
 module_header_abstract_form(Mod) ->
     [{attribute,0,module,Mod},
      {attribute,0,compile,[export_all]}].
 
+%% @private
+%% @doc Abstract form of function definition, this function replaces calls to
+%%      original module by calls to ltest_mock
+%% @end
 fundef_to_abstract_meta_form(Self, Mod, FunName, Arity) ->
     Line = 1,
     Params = [{var, Line, list_to_atom("A" ++ integer_to_list(I))}
@@ -189,6 +203,11 @@ fundef_to_abstract_meta_form(Self, Mod, FunName, Arity) ->
 	      end,
 	      {nil, Line}, Params)]}]}]}]}.
 
+%% @private
+%% @doc Compile and load the abstract form made using
+%%      module_header_abstract_form/1 and a list of functions from
+%%      fundef_to_abstract_meta_form/4
+%% @end
 compile_and_load_abstract_form(AbsForm) ->
     CompRes = compile:forms(AbsForm),
     {ok, Mod, Code} = CompRes,
@@ -196,9 +215,27 @@ compile_and_load_abstract_form(AbsForm) ->
     code:delete(Mod),
     {module, _} = load_module(Mod, Code).
 
+%% @private
+%% @doc Extracts the set of modules that are replaced by mock
+%% @end
 extract_module_set(Combined) ->
     sets:from_list(lists:map(fun([{M,_,_}|_]) -> M end, Combined)).
 
+%% @private
+%% @doc Programs mock. Receives expect definitions to add to mock and
+%% does replay.
+%%
+%% Expect definitions are divided in three lists, the definitions
+%% using in_order, out_of_order and stub.
+%% These definitions are improper lists: [{Mod, Fun, Arity} |
+%% {FilterFun, Answer}]
+%%
+%% Replay creates, compiles and loads module to replace original module
+%% by stub. After that spawns a process to cleanup mock after finish
+%% and send the signal 'cleanup_finished', that is expected to receive
+%% in verify call. Calls record_invocations that waits for calls to
+%% modules replaced by mock.
+%% @end
 program_mock(InOrder, OutOfOrder, Stub) ->
     receive
 	{From, {expect, Type, Mod, Fun, Arity, Arg}} ->
