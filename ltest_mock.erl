@@ -79,7 +79,7 @@ verify(Mock) ->
 verify_after_last_call(Mock) ->
     verify_after_last_call(Mock, 1500).
 verify_after_last_call(Mock, TimeOut) ->
-    catch(await(invocation_list_empty, TimeOut)),
+    catch await(invocation_list_empty, TimeOut),
     call(Mock, verify),
     await(cleanup_finished),
     error_logger:info_msg("mock ~p: verify finished~n~n~n", [Mock]).
@@ -230,7 +230,7 @@ extract_module_set(Combined) ->
 %% These definitions are improper lists: [{Mod, Fun, Arity} |
 %% {FilterFun, Answer}]
 %%
-%% Replay creates, compiles and loads module to replace original module
+%% Replay creates, compiles and loads modules to replace original modules
 %% by stub. After that spawns a process to cleanup mock after finish
 %% and send the signal 'cleanup_finished', that is expected to receive
 %% in verify call. Calls record_invocations that waits for calls to
@@ -238,63 +238,69 @@ extract_module_set(Combined) ->
 %% @end
 program_mock(InOrder, OutOfOrder, Stub) ->
     receive
-	{From, {expect, Type, Mod, Fun, Arity, Arg}} ->
-	    FunDef = [{Mod, Fun, Arity}
-		      | {filter_fun(Mod,Fun,Arity,Arg), answer_fun(Arg)}],
-	    From ! {response, ok},
-	    case Type of
-		in_order ->
-		    program_mock([FunDef | InOrder], OutOfOrder, Stub);
-		out_of_order ->
-		    program_mock(InOrder, [FunDef | OutOfOrder], Stub);
-		stub ->
-		    program_mock(InOrder, OutOfOrder, [FunDef | Stub])
-	    end;
-
-	{From, replay}  ->
-	    Self = pid_to_list(self()),
-	    Combined = InOrder ++ OutOfOrder ++ Stub,
-	    ModuleSet = extract_module_set(Combined),
-	    sets:fold(
-	      fun (Mod, _) ->
-		      FunsOfModSet = sets:from_list(
-				       lists:foldl(
-					 fun([{M,F,A}|_], Acc) ->
-						 if Mod == M -> [{F,A}|Acc];
-						    true -> Acc
-						 end
-					 end, [], Combined)),
-		      HeaderForm = module_header_abstract_form(Mod),
-		      FunctionForms = sets:fold(
-					fun({F,A},FFAcc) ->
-						[fundef_to_abstract_meta_form(
-						   Self, Mod, F, A)|FFAcc]
-					end,
-					[],
-					FunsOfModSet),
-		      CLRes = compile_and_load_abstract_form(
-				HeaderForm ++ FunctionForms),
-		      error_logger:info_msg(
-			"mock ~w: created and loaded mock code ~w~n",
-			[self(),CLRes])
-	      end, [], ModuleSet),
-	    From ! {response, ok},
-	    % spawn a cleanup process that will call the uninstall fun
-	    auto_cleanup(
-	      fun() ->
-		      uninstall(ModuleSet),
-		      signal(From, cleanup_finished)
-	      end),
-	    record_invocations(
-	      lists:reverse(InOrder),
-	      OutOfOrder,
-	      Stub,
-	      fun() ->
-		      signal(From, invocation_list_empty)
-	      end);
-	{From, What} ->
-	    fail(From, {invalid_state, What})
+      {From, {expect, Type, Mod, Fun, Arity, Arg}} ->
+	  FunDef = [{Mod, Fun, Arity}
+		    | {filter_fun(Mod, Fun, Arity, Arg), answer_fun(Arg)}],
+	  From ! {response, ok},
+	  case Type of
+	    in_order ->
+		program_mock([FunDef| InOrder], OutOfOrder, Stub);
+	    out_of_order ->
+		program_mock(InOrder, [FunDef| OutOfOrder], Stub);
+	    stub ->
+		program_mock(InOrder, OutOfOrder, [FunDef| Stub])
+	  end;
+      
+      {From, replay} ->
+	  Self = pid_to_list(self()),
+	  Combined = InOrder ++ OutOfOrder ++ Stub,
+	  ModuleSet = extract_module_set(Combined),
+	  replace_modules_by_abstract_forms(Self, Combined, ModuleSet),
+	  From ! {response, ok},
+	  % spawn a cleanup process that will call the uninstall fun
+	  auto_cleanup(
+	    fun () ->
+		    uninstall(ModuleSet),
+		    signal(From, cleanup_finished)
+	    end),
+	  record_invocations(
+	    lists:reverse(InOrder),
+	    OutOfOrder,
+	    Stub,
+	    fun () ->
+		    signal(From, invocation_list_empty)
+	    end);
+      {From, What} ->
+	  fail(From, {invalid_state, What})
     end.
+
+%% @private
+%% @doc Creates, compiles and loads modules to replace original modules by stub.
+%% @end
+replace_modules_by_abstract_forms(Self, Combined, ModuleSet) ->
+    sets:fold(
+      fun (Mod, _) ->
+	      FunsOfModSet = sets:from_list(
+			       lists:foldl(
+				 fun ([{M, F, A}| _], Acc) ->
+					 if Mod == M -> [{F, A}| Acc];
+					    true -> Acc
+					 end
+				 end, [], Combined)),
+	      HeaderForm = module_header_abstract_form(Mod),
+	      FunctionForms = sets:fold(
+				fun ({F, A}, FFAcc) ->
+					[fundef_to_abstract_meta_form(
+					   Self, Mod, F, A)| FFAcc]
+				end,
+				[],
+				FunsOfModSet),
+	      CLRes = compile_and_load_abstract_form(
+			HeaderForm ++ FunctionForms),
+	      error_logger:info_msg(
+		"mock ~w: created and loaded mock code ~w~n",
+		[self(), CLRes])
+      end, [], ModuleSet).
 
 record_invocations([], [], Stub, EmptyFun) when is_function(EmptyFun) ->
     EmptyFun(),
