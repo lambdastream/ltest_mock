@@ -343,33 +343,37 @@ expect_invocation(InOrder, OutOfOrder, Stub, EF,
 		  Invocation = {ProcUnderTestPid, Mod, Fun, Arity, Args}) ->
     InvMatcher = invocation_matcher(Mod, Fun, Arity, Args),
     try
-      case InOrder of
-	[Test| _] -> InvMatcher(Test);
-	[] -> false
+      case is_in_order_invocation(InOrder, InvMatcher) of    
+	  true ->
+	      in_order_invocation(InOrder, OutOfOrder, Stub, EF,
+				  ProcUnderTestPid);
+	  false ->
+	      case lists:partition(InvMatcher, OutOfOrder) of
+		  {[OOODef| Rest1], Rest2} ->
+		      out_of_order_invocation(InOrder, Stub, EF,
+					      ProcUnderTestPid,
+					      OOODef, Rest1, Rest2);
+		  {[], _} ->
+		      case lists:filter(InvMatcher, Stub) of
+			  [StubDef| _] ->
+			      stub_invocation(InOrder, OutOfOrder, Stub, EF,
+					      ProcUnderTestPid, StubDef);
+			  _ ->
+			      unexpected_invocation(EF, Invocation,
+						    ProcUnderTestPid)
+		      end
+	      end
       end
-    of
-      true ->
-	  in_order_invocation(InOrder, OutOfOrder, Stub, EF,
-			      ProcUnderTestPid);
-      false ->
-	  case lists:partition(InvMatcher, OutOfOrder) of
-	    {[OOODef| Rest1], Rest2} ->
-		out_of_order_invocation(InOrder, Stub, EF,
-					ProcUnderTestPid,
-					OOODef, Rest1, Rest2);
-	    {[], _} ->
-		case lists:filter(InvMatcher, Stub) of
-		  [StubDef| _] ->
-		      stub_invocation(InOrder, OutOfOrder, Stub, EF,
-				      ProcUnderTestPid, StubDef);
-		  _ -> unexpected_invocation(EF, Invocation, ProcUnderTestPid)
-		end
-	  end
     catch
-      ET:EX ->
-	  matching_function_error(EF, Invocation, ProcUnderTestPid, ET, EX)
+	ET:EX ->
+	    matching_function_error(EF, Invocation, ProcUnderTestPid, ET, EX)
     end.
 
+is_in_order_invocation([], _InvMatcher) ->
+    false;
+is_in_order_invocation([Test | _], InvMatcher) ->
+    InvMatcher(Test).
+    
 %% @private
 %% @doc Error in matching function. This makes mock fail
 %% @end
