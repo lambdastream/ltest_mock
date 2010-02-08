@@ -336,7 +336,7 @@ record_invocations(InOrder, OutOfOrder, Stub, EF) ->
 
 expect_invocation(InOrder, OutOfOrder, Stub, EF,
 		  Invocation = {ProcUnderTestPid, Mod, Fun, Arity, Args}) ->
-    InvMatcher =  invocation_matcher(Mod, Fun, Arity, Args),
+    InvMatcher = invocation_matcher(Mod, Fun, Arity, Args),
     try
       case InOrder of
 	[Test| _] -> InvMatcher(Test);
@@ -362,12 +362,19 @@ expect_invocation(InOrder, OutOfOrder, Stub, EF,
 	  end
     catch
       ET:EX ->
-	  Reason = {matching_function_is_incorrent,
-		    Invocation, {ET, EX}},
-	  ProcUnderTestPid ! {mock_process_gaurd__, {error, Reason}},
-	  EF(),
-	  fail(Reason)
+	  matching_function_error(EF, Invocation, ProcUnderTestPid, ET, EX)
     end.
+
+%% @private
+%% @doc Error in matching function. This makes mock fail
+%% @end
+matching_function_error(EF, Invocation, ProcUnderTestPid, ET,
+			EX) ->
+    Reason = {matching_function_is_incorrent,
+	      Invocation, {ET, EX}},
+    ProcUnderTestPid ! {mock_process_gaurd__, {error, Reason}},
+    EF(),
+    fail(Reason).
 
 %% @private
 %% @doc Returns invocation function matcher, to check if call is part
