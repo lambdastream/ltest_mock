@@ -326,58 +326,66 @@ record_invocations(InOrder, OutOfOrder, Stub, EF) ->
     % wait for all incoming invocations, expect every invocation and crash if
     % the invocation was not correct
     receive
-      Invocation = {ProcUnderTestPid, Mod, Fun, Arity, Args} ->
-	  InvMatcher = fun ([{M, F, A}| {Pred, _}]) ->
-			       {M, F, A} == {Mod, Fun, Arity} andalso Pred(Args)
-		       end,
-	  try
-	    case InOrder of
-	      [Test| _] -> InvMatcher(Test);
-	      [] -> false
-	    end
-	  of
-	    true ->
-		in_order_invocation(InOrder, OutOfOrder, Stub, EF,
-				    ProcUnderTestPid);
-	    false ->
-		case lists:partition(InvMatcher, OutOfOrder) of
-		  {[OOODef| Rest1], Rest2} ->
-		      out_of_order_invocation(InOrder, Stub, EF,
-					      ProcUnderTestPid,
-					      OOODef, Rest1, Rest2);
-		  {[], _} ->
-		      case lists:filter(InvMatcher, Stub) of
-			[StubDef| _] ->
-			    stub_invocation(InOrder, OutOfOrder, Stub, EF,
-					    ProcUnderTestPid, StubDef);
-			  _ ->
-			    EF(),
-			    Reason = {unexpected_invocation, Invocation},
-			    ProcUnderTestPid ! {mock_process_gaurd__,
-						{error, Reason}},
-			    fail(Reason)
-		      end
+	Invocation = {_, _, _, _, _} ->
+	    expect_invocation(InOrder, OutOfOrder, Stub, EF, Invocation);      
+	{From, verify} -> verify_invocation(InOrder, OutOfOrder, From);	
+	{From, What} ->
+	    EF(),
+	    fail(From, {invalid_state, What})
+    end.
+
+expect_invocation(InOrder, OutOfOrder, Stub, EF,
+		  Invocation = {ProcUnderTestPid, Mod, Fun, Arity, Args}) ->
+    InvMatcher = fun ([{M, F, A}| {Pred, _}]) ->
+			 {M, F, A} == {Mod, Fun, Arity} andalso Pred(Args)
+		 end,
+    try
+      case InOrder of
+	[Test| _] -> InvMatcher(Test);
+	[] -> false
+      end
+    of
+      true ->
+	  in_order_invocation(InOrder, OutOfOrder, Stub, EF,
+			      ProcUnderTestPid);
+      false ->
+	  case lists:partition(InvMatcher, OutOfOrder) of
+	    {[OOODef| Rest1], Rest2} ->
+		out_of_order_invocation(InOrder, Stub, EF,
+					ProcUnderTestPid,
+					OOODef, Rest1, Rest2);
+	    {[], _} ->
+		case lists:filter(InvMatcher, Stub) of
+		  [StubDef| _] ->
+		      stub_invocation(InOrder, OutOfOrder, Stub, EF,
+				      ProcUnderTestPid, StubDef);
+		  _ ->
+		      EF(),
+		      Reason = {unexpected_invocation, Invocation},
+		      ProcUnderTestPid ! {mock_process_gaurd__,
+					  {error, Reason}},
+		      fail(Reason)
 		end
-	  catch
-	    ET:EX ->
-		Reason = {matching_function_is_incorrent,
-			  Invocation, {ET, EX}},
-		ProcUnderTestPid ! {mock_process_gaurd__, {error, Reason}},
-		EF(),
-		fail(Reason)
-	  end;
-      
-      {From, verify} ->
-	  case {InOrder, OutOfOrder} of
-	    {[], []} ->
-		success(From);
-	    MissingRest ->
-		fail(From, {expected_invocations_missing, MissingRest})
-	  end;
-      
-      {From, What} ->
+	  end
+    catch
+      ET:EX ->
+	  Reason = {matching_function_is_incorrent,
+		    Invocation, {ET, EX}},
+	  ProcUnderTestPid ! {mock_process_gaurd__, {error, Reason}},
 	  EF(),
-	  fail(From, {invalid_state, What})
+	  fail(Reason)
+    end.
+
+%% @private
+%% @doc This is part of verify behaviour, checks that there isn't more
+%% in_order or out_of_order calls. 
+%% @end
+verify_invocation(InOrder, OutOfOrder, From) ->
+    case {InOrder, OutOfOrder} of
+      {[], []} ->
+	  success(From);
+      MissingRest ->
+	  fail(From, {expected_invocations_missing, MissingRest})
     end.
 
 %% @private
