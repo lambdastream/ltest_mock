@@ -310,7 +310,10 @@ replace_modules_by_abstract_forms(Self, Combined, ModuleSet) ->
 %% @doc Waits for calls to modules replaced by mock. Performs them
 %% and throws exceptions in case of unexpected invocations. Function
 %% definition in each list of waited calls is an improper list.
-%%      
+%%
+%% Sends 'invocation_list_empty' event when InOrder and OutOfOrder are
+%% empty, after that recursive calls are done over record_invocations/1
+%%
 %% @spec record_invocations(InOrder::[fundef()], OutOfOrder::[fundef()],
 %%              Stub::[fundef()], function() | undefined) -> test_passed
 %%  fundef() = [{Mod::atom(), Fun::atom(), Arity::integer()} |
@@ -319,9 +322,9 @@ replace_modules_by_abstract_forms(Self, Combined, ModuleSet) ->
 %%           |{rec_msg, Pid}|{function, function()}
 %%           |{function1, function()}
 %% @end
-record_invocations([], [], Stub, EmptyFun) when is_function(EmptyFun)->
-    EmptyFun(),
-    record_invocations([], [], Stub, undefined);
+record_invocations([], [], Stub, EF) ->
+    EF(),
+    record_invocations(Stub);
 record_invocations(InOrder, OutOfOrder, Stub, EF) ->
     % wait for all incoming invocations, expect every invocation and crash if
     % the invocation was not correct
@@ -331,6 +334,25 @@ record_invocations(InOrder, OutOfOrder, Stub, EF) ->
 	{From, verify} -> verify_invocation(InOrder, OutOfOrder, From);	
 	{From, What} ->
 	    fail(From, {invalid_state, What})
+    end.
+
+%% @private
+%% @doc Waits for calls to modules replaced by mock with only stub calls.
+%% @end 
+record_invocations(Stub) ->
+    receive
+	Invocation = {ProcUnderTestPid, Mod, Fun, Arity, Args} ->
+	    InvMatcher = invocation_matcher(Mod, Fun, Arity, Args), 
+	    case lists:filter(InvMatcher, Stub) of
+		[StubDef| _] ->
+		    [_| {_, Function}] = StubDef,
+		    ProcUnderTestPid ! {mock_process_gaurd__, Function},
+		    record_invocations(Stub);
+		_ ->
+		    unexpected_invocation(Invocation, ProcUnderTestPid)
+	    end;
+	{From, verify} -> success(From);
+	{From, What} -> fail(From, {invalid_state, What})
     end.
 
 %% @private
