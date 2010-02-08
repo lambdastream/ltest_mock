@@ -319,7 +319,7 @@ replace_modules_by_abstract_forms(Self, Combined, ModuleSet) ->
 %%           |{rec_msg, Pid}|{function, function()}
 %%           |{function1, function()}
 %% @end
-record_invocations([], [], Stub, EmptyFun) when is_function(EmptyFun) ->
+record_invocations([], [], Stub, EmptyFun) when is_function(EmptyFun)->
     EmptyFun(),
     record_invocations([], [], Stub, undefined);
 record_invocations(InOrder, OutOfOrder, Stub, EF) ->
@@ -330,7 +330,6 @@ record_invocations(InOrder, OutOfOrder, Stub, EF) ->
 	    expect_invocation(InOrder, OutOfOrder, Stub, EF, Invocation);      
 	{From, verify} -> verify_invocation(InOrder, OutOfOrder, From);	
 	{From, What} ->
-	    EF(),
 	    fail(From, {invalid_state, What})
     end.
 
@@ -359,7 +358,7 @@ expect_invocation(InOrder, OutOfOrder, Stub, EF,
 			      stub_invocation(InOrder, OutOfOrder, Stub, EF,
 					      ProcUnderTestPid, StubDef);
 			  _ ->
-			      unexpected_invocation(EF, Invocation,
+			      unexpected_invocation(Invocation,
 						    ProcUnderTestPid)
 		      end
 	      end
@@ -368,7 +367,7 @@ expect_invocation(InOrder, OutOfOrder, Stub, EF,
 	{mock_failure, _} = What ->
 	    throw(What);
 	ET:EX ->
-	    matching_function_error(EF, Invocation, ProcUnderTestPid, ET, EX)
+	    matching_function_error(Invocation, ProcUnderTestPid, ET, EX)
     end.
 
 is_in_order_invocation([], _InvMatcher) ->
@@ -379,12 +378,10 @@ is_in_order_invocation([Test | _], InvMatcher) ->
 %% @private
 %% @doc Error in matching function. This makes mock fail
 %% @end
-matching_function_error(EF, Invocation, ProcUnderTestPid, ET,
-			EX) ->
+matching_function_error(Invocation, ProcUnderTestPid, ET, EX) ->
     Reason = {matching_function_is_incorrent,
 	      Invocation, {ET, EX}},
-    ProcUnderTestPid ! {mock_process_gaurd__, {error, Reason}},
-    EF(),
+    ProcUnderTestPid ! {mock_process_gaurd__, {error, Reason}},    
     fail(Reason).
 
 %% @private
@@ -399,8 +396,7 @@ invocation_matcher(Mod, Fun, Arity, Args) ->
 %% @private
 %% @doc Unexpected invocation. This makes mock fail
 %% @end
-unexpected_invocation(EF, Invocation, ProcUnderTestPid) ->
-    EF(),
+unexpected_invocation(Invocation, ProcUnderTestPid) ->
     Reason = {unexpected_invocation, Invocation},
     ProcUnderTestPid ! {mock_process_gaurd__,
 			{error, Reason}},
