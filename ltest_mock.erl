@@ -334,6 +334,11 @@ record_invocations(InOrder, OutOfOrder, Stub, EF) ->
 	    fail(From, {invalid_state, What})
     end.
 
+%% @private
+%% @doc Manages expect invocation. Checks in_order, out_of_order and
+%% stub invocations, sends invocation_list_empty signal when in_order
+%% and out_of_order lists are empty.
+%% @end
 expect_invocation(InOrder, OutOfOrder, Stub, EF,
 		  Invocation = {ProcUnderTestPid, Mod, Fun, Arity, Args}) ->
     InvMatcher = invocation_matcher(Mod, Fun, Arity, Args),
