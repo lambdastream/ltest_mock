@@ -235,7 +235,7 @@ compile_and_load_abstract_form(AbsForm) ->
 %% @doc Extracts the set of modules that are replaced by mock
 %% @end
 extract_module_set(Combined) ->
-    sets:from_list(lists:map(fun([{M,_,_}|_]) -> M end, Combined)).
+    sets:from_list(lists:map(fun({{M,_,_},_}) -> M end, Combined)).
 
 %% @private
 %% @doc Programs mock. Receives expect definitions to add to mock and
@@ -243,14 +243,14 @@ extract_module_set(Combined) ->
 %%
 %% Expect definitions are divided in three lists, the definitions
 %% using in_order, out_of_order and stub.
-%% These definitions are improper lists: [{Mod, Fun, Arity} |
-%% {FilterFun, Answer}]
+%% These definitions are a tuple: {{Mod, Fun, Arity},
+%% {FilterFun, Answer}}
 %% @end
 program_mock(InOrder, OutOfOrder, Stub) ->
     receive
       {From, {expect, Type, Mod, Fun, Arity, Arg}} ->
-	  FunDef = [{Mod, Fun, Arity}
-		    | {filter_fun(Mod, Fun, Arity, Arg), answer_fun(Arg)}],
+	  FunDef = {{Mod, Fun, Arity},
+		    {filter_fun(Mod, Fun, Arity, Arg), answer_fun(Arg)}},
 	  From ! {response, ok},
 	  case Type of
 	    in_order ->
@@ -302,7 +302,7 @@ replace_modules_by_abstract_forms(Self, Combined, ModuleSet) ->
       fun (Mod, _) ->
 	      FunsOfModSet = sets:from_list(
 			       lists:foldl(
-				 fun ([{M, F, A}| _], Acc) ->
+				 fun ({{M, F, A}, _}, Acc) ->
 					 if Mod == M -> [{F, A}| Acc];
 					    true -> Acc
 					 end
@@ -332,8 +332,8 @@ replace_modules_by_abstract_forms(Self, Combined, ModuleSet) ->
 %%
 %% @spec record_invocations(InOrder::[fundef()], OutOfOrder::[fundef()],
 %%              Stub::[fundef()], function() | undefined) -> test_passed
-%%  fundef() = [{Mod::atom(), Fun::atom(), Arity::integer()} |
-%%             {FilterFun::function(), answer()}]
+%%  fundef() = {{Mod::atom(), Fun::atom(), Arity::integer()} ,
+%%             {FilterFun::function(), answer()}}
 %%  answer() = {return, term()}|{error, term()}|{throw, term()}|{exit, term()}
 %%           |{rec_msg, Pid}|{function, function()}
 %%           |{function1, function()}
@@ -361,7 +361,7 @@ record_invocations(Stub) ->
 	    InvMatcher = invocation_matcher(Mod, Fun, Arity, Args), 
 	    case lists:filter(InvMatcher, Stub) of
 		[StubDef| _] ->
-		    [_| {_, Function}] = StubDef,
+		    {_, {_, Function}} = StubDef,
 		    ProcUnderTestPid ! {mock_process_gaurd__, Function},
 		    record_invocations(Stub);
 		_ ->
@@ -427,7 +427,7 @@ matching_function_error(Invocation, ProcUnderTestPid, ET, EX) ->
 %% of the invocation list. 
 %% @end
 invocation_matcher(Mod, Fun, Arity, Args) ->
-    fun ([{M, F, A}| {Pred, _}]) ->
+    fun ({{M, F, A}, {Pred, _}}) ->
 	    {M, F, A} == {Mod, Fun, Arity} andalso Pred(Args)
     end.
 
@@ -458,7 +458,7 @@ verify_invocation(InOrder, OutOfOrder, From) ->
 %% @end
 stub_invocation(InOrder, OutOfOrder, Stub, EF,
 		ProcUnderTestPid, StubDef) ->
-    [_| {_, Function}] = StubDef,
+    {_, {_, Function}} = StubDef,
     ProcUnderTestPid ! {mock_process_gaurd__, Function},
     record_invocations(InOrder, OutOfOrder, Stub, EF).
 
@@ -468,7 +468,7 @@ stub_invocation(InOrder, OutOfOrder, Stub, EF,
 %% @end
 out_of_order_invocation(InOrder, Stub, EF, ProcUnderTestPid,
 			OOODef, Rest1, Rest2) ->
-    [_| {_, Function}] = OOODef,
+    {_, {_, Function}} = OOODef,
     ProcUnderTestPid ! {mock_process_gaurd__, Function},
     record_invocations(InOrder, Rest1 ++ Rest2, Stub, EF).
 
@@ -478,7 +478,7 @@ out_of_order_invocation(InOrder, Stub, EF, ProcUnderTestPid,
 %% @end
 in_order_invocation(InOrder, OutOfOrder, Stub, EF,
 		    ProcUnderTestPid) ->
-    [[_| {_, Function}]| IOR] = InOrder,
+    [{_, {_, Function}}| IOR] = InOrder,
     ProcUnderTestPid ! {mock_process_gaurd__, Function},
     record_invocations(IOR, OutOfOrder, Stub, EF).
 
