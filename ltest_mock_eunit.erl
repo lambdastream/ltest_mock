@@ -322,7 +322,8 @@ verify_after_fail_test_() ->
               ?_assertError(
 		 {unexpected_invocation, {_Pid, testmodule, mockme, 2, [1,4]}},
 		 testmodule:mockme(1, 4)),
-	      ?_test(ltest_mock:verify(Mock))
+	      ?_assertThrow({mock_failure,mock_failed_before_verify},
+			    ltest_mock:verify(Mock))
              ]
      end}.
 
