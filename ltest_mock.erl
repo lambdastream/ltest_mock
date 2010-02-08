@@ -306,6 +306,19 @@ replace_modules_by_abstract_forms(Self, Combined, ModuleSet) ->
 		[self(), CLRes])
       end, [], ModuleSet).
 
+%% @private
+%% @doc Waits for calls to modules replaced by mock. Performs them
+%% and throws exceptions in case of unexpected invocations. Function
+%% definition in each list of waited calls is an improper list.
+%%      
+%% @spec record_invocations(InOrder::[fundef()], OutOfOrder::[fundef()],
+%%              Stub::[fundef()], function() | undefined) -> test_passed
+%%  fundef() = [{Mod::atom(), Fun::atom(), Arity::integer()} |
+%%             {FilterFun::function(), answer()}]
+%%  answer() = {return, term()}|{error, term()}|{throw, term()}|{exit, term()}
+%%           |{rec_msg, Pid}|{function, function()}
+%%           |{function1, function()}
+%% @end
 record_invocations([], [], Stub, EmptyFun) when is_function(EmptyFun) ->
     EmptyFun(),
     record_invocations([], [], Stub, undefined);
@@ -313,68 +326,89 @@ record_invocations(InOrder, OutOfOrder, Stub, EF) ->
     % wait for all incoming invocations, expect every invocation and crash if
     % the invocation was not correct
     receive
-	Invocation = {ProcUnderTestPid, Mod, Fun, Arity, Args} ->
-	    InvMatcher = fun ([{M,F,A}|{Pred,_}]) ->
-				 {M,F,A} == {Mod, Fun, Arity} andalso Pred(Args)
-			 end,
-	    try
-		case InOrder of
-		    [Test| _] ->  InvMatcher(Test);
-		    [] -> false
+      Invocation = {ProcUnderTestPid, Mod, Fun, Arity, Args} ->
+	  InvMatcher = fun ([{M, F, A}| {Pred, _}]) ->
+			       {M, F, A} == {Mod, Fun, Arity} andalso Pred(Args)
+		       end,
+	  try
+	    case InOrder of
+	      [Test| _] -> InvMatcher(Test);
+	      [] -> false
+	    end
+	  of
+	    true ->
+		in_order_invocation(InOrder, OutOfOrder, Stub, EF,
+				    ProcUnderTestPid);
+	    false ->
+		case lists:partition(InvMatcher, OutOfOrder) of
+		  {[OOODef| Rest1], Rest2} ->
+		      out_of_order_invocation(InOrder, Stub, EF,
+					      ProcUnderTestPid,
+					      OOODef, Rest1, Rest2);
+		  {[], _} ->
+		      case lists:filter(InvMatcher, Stub) of
+			[StubDef| _] ->
+			    stub_invocation(InOrder, OutOfOrder, Stub, EF,
+					    ProcUnderTestPid, StubDef);
+			  _ ->
+			    EF(),
+			    Reason = {unexpected_invocation, Invocation},
+			    ProcUnderTestPid ! {mock_process_gaurd__,
+						{error, Reason}},
+			    fail(Reason)
+		      end
 		end
-		of
-		true ->
-		    [[_|{_,Function}]| IOR] = InOrder,
-		    ProcUnderTestPid ! {mock_process_gaurd__, Function},
-		    record_invocations(IOR, OutOfOrder, Stub, EF);
-
-		false ->
-		    case lists:partition(InvMatcher, OutOfOrder) of
-			{[OOODef|Rest1],Rest2} ->
-			    [_|{_,Function}] = OOODef,
-			    ProcUnderTestPid ! {mock_process_gaurd__, Function},
-			    record_invocations(
-			      InOrder, Rest1 ++ Rest2, Stub, EF);
-			
-			{[], _} ->
-			    case lists:filter(InvMatcher, Stub) of
-				[StubDef|_] ->
-				    [_|{_,Function}] = StubDef,
-				    ProcUnderTestPid ! {mock_process_gaurd__,
-							Function},
-				    record_invocations(
-				      InOrder, OutOfOrder, Stub, EF);
-
-				_ ->
-				    EF(),
-				    Reason = {unexpected_invocation, Invocation},
-				    ProcUnderTestPid ! {mock_process_gaurd__,
-							{error, Reason}},
-				    fail(Reason)
-			    end
-		    end
-	    catch
-		ET:EX ->
-		    Reason = {matching_function_is_incorrent,
-			      Invocation, {ET, EX}},
-		    ProcUnderTestPid ! {mock_process_gaurd__, {error, Reason}},
-		    EF(),
-		    fail(Reason)
-	    end;
-
-	{From, verify} ->
-	    case {InOrder,OutOfOrder} of
-		{[],[]} ->
-		    success(From);
-		MissingRest ->
-		    fail(From,{expected_invocations_missing, MissingRest})
-	    end;
-
-	{From, What} ->
-	    EF(),
-	    fail(From, {invalid_state, What})
-
+	  catch
+	    ET:EX ->
+		Reason = {matching_function_is_incorrent,
+			  Invocation, {ET, EX}},
+		ProcUnderTestPid ! {mock_process_gaurd__, {error, Reason}},
+		EF(),
+		fail(Reason)
+	  end;
+      
+      {From, verify} ->
+	  case {InOrder, OutOfOrder} of
+	    {[], []} ->
+		success(From);
+	    MissingRest ->
+		fail(From, {expected_invocations_missing, MissingRest})
+	  end;
+      
+      {From, What} ->
+	  EF(),
+	  fail(From, {invalid_state, What})
     end.
+
+%% @private
+%% @doc Expected invocation to stub call. Replies to module call and
+%% continues mock execution
+%% @end
+stub_invocation(InOrder, OutOfOrder, Stub, EF,
+		ProcUnderTestPid, StubDef) ->
+    [_| {_, Function}] = StubDef,
+    ProcUnderTestPid ! {mock_process_gaurd__, Function},
+    record_invocations(InOrder, OutOfOrder, Stub, EF).
+
+%% @private
+%% @doc Expected invocation to out_of_order call. Replies to module call and
+%% continues mock execution
+%% @end
+out_of_order_invocation(InOrder, Stub, EF, ProcUnderTestPid,
+			OOODef, Rest1, Rest2) ->
+    [_| {_, Function}] = OOODef,
+    ProcUnderTestPid ! {mock_process_gaurd__, Function},
+    record_invocations(InOrder, Rest1 ++ Rest2, Stub, EF).
+
+%% @private
+%% @doc Expected invocation to in_order call. Replies to module call and
+%% continues mock execution
+%% @end
+in_order_invocation(InOrder, OutOfOrder, Stub, EF,
+		    ProcUnderTestPid) ->
+    [[_| {_, Function}]| IOR] = InOrder,
+    ProcUnderTestPid ! {mock_process_gaurd__, Function},
+    record_invocations(IOR, OutOfOrder, Stub, EF).
 
 invocation_event({MockPidStr, Mod, Fun, Arity, Args}) ->
     MockPid = list_to_pid(MockPidStr),
