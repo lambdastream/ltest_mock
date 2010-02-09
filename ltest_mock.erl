@@ -417,7 +417,7 @@ is_in_order_invocation([Test | _], InvMatcher) ->
 %% @doc Error in matching function. This makes mock fail
 %% @end
 matching_function_error(Invocation, ProcUnderTestPid, ET, EX) ->
-    Reason = {matching_function_is_incorrent,
+    Reason = {matching_function_is_incorrect,
 	      Invocation, {ET, EX}},
     ProcUnderTestPid ! {mock_process_gaurd__, {error, Reason}},    
     fail(Reason).

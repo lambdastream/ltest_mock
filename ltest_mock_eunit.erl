@@ -296,7 +296,7 @@ stub_bug257_4_test_() ->
      fun(Mock) ->
              [
               ?_test(ltest_mock:replay(Mock)),
-	      ?_assertError({matching_function_is_incorrent, _, _},
+	      ?_assertError({matching_function_is_incorrect, _, _},
 			    testmodule:mockme2(3))
              ]
      end}.
