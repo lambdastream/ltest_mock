@@ -16,6 +16,13 @@
 -module(ltest_mock_eunit).
 -include_lib("eunit/include/eunit.hrl").
 
+-testframe({xref, [{no_warn, [{undefined, [{mockme, 1},
+					   {mockme, 2},
+					   {mockme1, 1},
+					   {mockme1, 2},
+					   {mockme2, 1},
+					   {mockme2, 2}]}]}]}).
+
 in_order_test_() ->
     {setup,
      fun () ->
