@@ -278,12 +278,14 @@ program_mock_replay(InOrder, OutOfOrder, Stub, From) ->
     Self = pid_to_list(self()),
     Combined = InOrder ++ OutOfOrder ++ Stub,
     ModuleSet = extract_module_set(Combined),
+    % Get binaries to restore after uninstall mock
+    ModuleBins = get_binaries(ModuleSet),
     replace_modules_by_abstract_forms(Self, Combined, ModuleSet),
     From ! {response, ok},
     % spawn a cleanup process that will call the uninstall fun
     auto_cleanup(
       fun () ->
-	      uninstall(ModuleSet),
+	      uninstall(ModuleBins),
 	      signal(From, cleanup_finished)
       end),
     record_invocations(
@@ -293,6 +295,50 @@ program_mock_replay(InOrder, OutOfOrder, Stub, From) ->
       fun () ->
 	      signal(From, invocation_list_empty)
       end).
+
+%% @private
+%% @doc Gets cover compiled binaries to restore after uninstall mock. 
+%% 
+%% @spec get_binaries(set()) -> [mod()]
+%% mod() = atom() | {atom(), binary()}
+%% @end
+get_binaries(ModuleSet) ->
+    Mods = sets:to_list(ModuleSet),
+    lists:map(fun (Mod) ->
+		      case code:which(Mod) of
+			  cover_compiled ->
+			      get_cover_compiled_binary(Mod);
+			  _ ->
+			      Mod
+		      end
+	      end, Mods).
+
+
+%% @private
+%% @doc Gets cover compiled binary to restore after uninstall mock. 
+%% Reads `cover_binary_code_table', so it depends on cover implementation
+%% 
+%% @spec get_cover_compiled_binary(atom()) -> [mod()]
+%% mod() = atom() | {atom(), binary()}
+%% @end
+get_cover_compiled_binary(Mod) ->
+    case ets:info(cover_binary_code_table) of
+	undefined ->
+	    error_logger:info_msg(
+	      "mock ~w: ERROR table of cover compiled binaries not found~n",
+	      [self()]),
+	    Mod;
+	_ ->
+	    case ets:lookup(cover_binary_code_table, Mod) of
+		[] ->
+		    error_logger:info_msg(
+		      "mock ~w: ERROR cover compiled binary of ~p not found~n",
+		      [self(), Mod]),
+		    Mod;
+		[H | _] ->
+		    H
+	    end
+    end.
 
 %% @private
 %% @doc Creates, compiles and loads modules to replace original modules by stub.
@@ -522,13 +568,24 @@ invocation_event({MockPidStr, Mod, Fun, Arity, Args}) ->
 seq(A, E) when A > E -> [];
 seq(A, E) -> lists:seq(A,E).
 
-uninstall(ModuleSet) ->
+%% @private
+%% @doc Delete and purge mock modules. Load cover compiled modules.
+%%
+%% @spec uninstall([atom()]) -> any()
+%% @end
+uninstall(ModuleList) ->
     lists:map(
-      fun(Mod) ->
-	      error_logger:info_msg("Deleting and purging module ~p~n", [Mod]),
-	      code:purge(Mod),
-	      code:delete(Mod)
-      end, sets:to_list(ModuleSet)).
+      fun ({Mod, Bin}) ->
+	      uninstall_module(Mod),
+	      code:load_binary(Mod, cover_compiled, Bin);
+	  (Mod) ->
+	      uninstall_module(Mod)
+      end, ModuleList).
+
+uninstall_module(Mod) ->
+    error_logger:info_msg("Deleting and purging module ~p~n", [Mod]),
+    code:purge(Mod),
+    code:delete(Mod).
 
 auto_cleanup(CleanupFun) ->
     spawn_link(
