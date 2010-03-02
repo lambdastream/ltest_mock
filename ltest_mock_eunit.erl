@@ -536,6 +536,74 @@ expect_matcher_fun_error_throws_exception_test_() ->
               ]
      end}.
 
+mock_cover_compiled_module_test_() ->
+    {setup,
+     fun() ->
+	     Dir = ltest_file_utils:create_test_dir(),
+	     File = filename:join(Dir, "ltest_mock_test_module.erl"),
+	     Content = "-module(ltest_mock_test_module). \n "
+		 ++ "-export([function/0, function2/0]). \n"
+		 ++ "function() -> fail. \n"
+		 ++ "function2() -> fail. \n",
+	     file:write_file(File, Content),	     
+	     Mock = ltest_mock:new(),
+	     ltest_mock:strict(Mock, ltest_mock_test_module, function2, [], {return, ok}),
+	     unlink(Mock),
+	     {Mock, File}
+     end,
+     fun({_, File}) ->
+	     lstd_file:delete_recursive(filename:dirname(File)),
+	     cover:stop()
+     end,
+     fun({Mock, File}) ->
+	     [% Cover compile module	      
+	      ?_test(cover:start()),
+	      ?_assertMatch({ok, _}, cover:compile(File)),
+	      % Call module to increase coverage
+	      ?_assertMatch(fail, ltest_mock_test_module:function()),
+	      % Start mock
+	      ?_test(ltest_mock:replay(Mock)),
+	      % Call mocked module
+	      ?_assertMatch(ok, ltest_mock_test_module:function2()),
+	      % Verify mock (and restart cover compiled module)
+	      ?_test(ltest_mock:verify(Mock)),
+	      % Coverage analysis. Mocked calls aren't covered
+	      ?_assertMatch({ok,[{{ltest_mock_test_module,function,0},{1,0}},
+				 {{ltest_mock_test_module,function2,0},{0,1}}]},
+			    cover:analyse(ltest_mock_test_module))
+	      ]
+     end}.
+
+mock_not_cover_compiled_module_test_() ->
+    {setup,
+     fun() ->
+	     Dir = ltest_file_utils:create_test_dir(),
+	     File = filename:join(Dir, "ltest_mock_test_module.erl"),
+	     Content = "-module(ltest_mock_test_module). \n "
+		 ++ "-export([function/0, function2/0]). \n"
+		 ++ "function() -> fail. \n"
+		 ++ "function2() -> fail. \n",
+	     file:write_file(File, Content),	     
+	     Mock = ltest_mock:new(),
+	     ltest_mock:strict(Mock, ltest_mock_test_module, function2, [], {return, ok}),
+	     unlink(Mock),
+	     {Mock, File}
+     end,
+     fun({_Mock, File}) ->
+	     lstd_file:delete_recursive(filename:dirname(File)),
+	     cover:stop()
+     end,
+     fun({Mock, _File}) ->
+	     [% Start mock
+	      ?_test(ltest_mock:replay(Mock)),
+	      % Call mocked module
+	      ?_assertMatch(ok, ltest_mock_test_module:function2()),
+	      % Verify mock (and restart cover compiled module)
+	      ?_test(ltest_mock:verify(Mock)),
+	      % Coverage analysis. Mocked calls aren't covered
+	      ?_assertMatch(non_existing, code:which(ltest_mock_test_module))
+	      ]
+     end}.
 %%%-------------------------------------------------------------------
 %%% Common functions
 %%%-------------------------------------------------------------------
