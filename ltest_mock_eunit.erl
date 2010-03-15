@@ -7,13 +7,7 @@
 %%% Created :  3 Dec 2009 by Samuel Rivas <samuel.rivas@lambdastream.com>
 %%%-------------------------------------------------------------------
 -module(ltest_mock_eunit).
--compile(export_all).
 -include_lib("eunit/include/eunit.hrl").
-
-suite() ->
-    verify_test(),
-    verify_without_spec_fails_test(),
-    io:format("~n~nfinished without unexpected errors! error reports may be ignored!!~n~n~n").
 
 in_order_test_() ->
     {setup,
