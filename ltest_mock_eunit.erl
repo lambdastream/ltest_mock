@@ -1,4 +1,11 @@
+%%% The original test suite was originally copied from Sven Heyll's blog:
+%%%
+%%% http://sheyll.blogspot.com/2009/02/erlang-mock-erlymock.html
+%%%
+%%% I adapted it to EUnit and started doing some improvements in the tests
+
 %%%-------------------------------------------------------------------
+%%% @author Sven Heyll
 %%% @author Samuel Rivas <samuel.rivas@lambdastream.com>
 %%% @copyright (C) 2009, Samuel Rivas
 %%% @doc Tests for ltest_mock.erl
@@ -396,7 +403,7 @@ verify_without_spec_fails_test() ->
     ?assertThrow(
        {mock_failure, {invalid_state, verify}},ltest_mock:verify(Mock)).
 
-strict_wrong_spec_raises_function_clause_() ->
+strict_wrong_spec_raises_function_clause_test_() ->
     {setup,
      fun() ->
              ltest_mock:new()
@@ -455,7 +462,7 @@ o_o_fun_test_() ->
              ]
      end}.
 
-stub_fun_can_raise_errors_() ->
+stub_fun_can_raise_errors_test_() ->
     {setup,
      fun() ->
              Mock = ltest_mock:new(),
@@ -473,7 +480,7 @@ stub_fun_can_raise_errors_() ->
              ]
      end}.
 
-expect_matcher_fun_test_test_() ->
+expect_matcher_fun_test_() ->
     {setup,
      fun() ->
              Mock = ltest_mock:new(),
@@ -529,6 +536,8 @@ expect_matcher_fun_error_throws_exception_test_() ->
 %% This cleanup function avoids leaking Mocks in some tests
 mock_cleanup() ->
     fun (Mock) ->
+            % Unlink just in case, to avoid committing suicide
+            unlink(Mock),
             exit(Mock, kill)
     end.
 
